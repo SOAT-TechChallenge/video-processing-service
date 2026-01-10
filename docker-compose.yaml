@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  video-processor:
+    build: .
+    container_name: video-processor
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+      - ./app:/app/app
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - video-network
+networks:
+  video-network:
+    driver: bridge
+
+volumes:
+  uploads:
+  outputs:

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: video-processor-config
+data:
+  UPLOAD_DIR: "/app/uploads"
+  OUTPUT_DIR: "/app/outputs"
+  MAX_WORKERS: "5"
+  FRAMES_PER_SECOND: "1"
