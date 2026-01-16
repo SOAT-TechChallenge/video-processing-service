@@ -1,0 +1,102 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  python-ci:
+    name: 'Python Build & Quality Check'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: 'Setup Python'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 'Install System Dependencies'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ffmpeg \
+            libsm6 \
+            libxext6 \
+            libxrender-dev \
+            libglib2.0-0
+
+      - name: 'Install Python Dependencies'
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+          fi
+          if [ -f "setup.py" ]; then
+            pip install -e .
+          fi
+          # Dependências de teste
+          pip install pytest pytest-cov pytest-asyncio pytest-mock
+
+      - name: 'Build and Verify Coverage'
+        run: |
+          python -m pytest tests/ \
+            -v \
+            --asyncio-mode=auto \
+            --cov=app \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-report=term-missing
+
+      - name: 'Publish Coverage to PR'
+        if: github.event_name == 'pull_request'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: true
+
+  terraform:
+    name: 'Terraform Plan and Apply'
+    needs: python-ci
+    runs-on: ubuntu-latest
+    environment: secrets
+
+    defaults:
+      run:
+        working-directory: ./terraform
+    steps:
+      - name: 'Checkout GitHub Repository'
+        uses: actions/checkout@v4
+    
+      - name: 'Setup Terraform'
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.9.6 
+
+      - name: 'Configure AWS Credentials'
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1 
+
+      - name: 'Terraform Init'
+        run: terraform init
+
+      - name: 'Terraform Plan'
+        run: terraform plan
+
+      - name: 'Terraform Apply'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: terraform apply -auto-approve

@@ -1,9 +1,52 @@
+# Dependências principais
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-pydantic==2.5.0
+pydantic==2.12.5
 python-multipart==0.0.6
-opencv-python-headless==4.8.1.78
-pillow==10.1.0
+opencv-python-headless==4.10.0.84
+pillow==10.2.0
 python-dotenv==1.0.0
-numpy==1.24.3
+numpy==1.26.4
 aiofiles==23.2.1
+boto3==1.28.64
+aiobotocore==2.7.0
+aioboto3==12.0.0
+
+# Dependências do AWS SDK
+botocore==1.31.64
+s3transfer==0.7.0
+jmespath==1.0.1
+python-dateutil==2.9.0.post0
+six==1.17.0
+
+# Dependências do FastAPI/Starlette
+starlette==0.27.0
+anyio==3.7.1
+httpx==0.28.1
+httpcore==1.0.9
+h11==0.16.0
+sniffio==1.3.1
+
+# Dependências do Pydantic
+pydantic-core==2.41.5
+typing-extensions==4.15.0
+annotated-types==0.7.0
+
+# Dependências de teste
+pytest==8.0.0
+pytest-asyncio==0.23.2
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+coverage==7.13.1
+iniconfig==2.3.0
+pluggy==1.6.0
+
+# Dependências de desenvolvimento/opcionais
+watchfiles==1.1.1
+click==8.3.1
+websockets==16.0
+httptools==0.7.1
+uvloop==0.21.0
+python-docx==1.2.0
+python-pptx==1.0.2 
+pytz==2025.2

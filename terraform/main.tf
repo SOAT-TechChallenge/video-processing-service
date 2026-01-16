@@ -40,7 +40,7 @@ data "aws_subnet" "details" {
 
 # Filtrar subnets para zonas suportadas pelo EKS
 locals {
-  # Zonas suportadas pelo EKS em us-east-1 (baseado no erro)
+  # Zonas suportadas pelo EKS em us-east-1
   eks_supported_zones = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1f"]
   
   # Filtrar subnets que estão nas zonas suportadas
@@ -50,7 +50,7 @@ locals {
     if contains(local.eks_supported_zones, data.aws_subnet.details[subnet_id].availability_zone)
   ]
   
-  # Usar apenas as primeiras 2-3 subnets (EKS requer no mínimo 2)
+  # Usar apenas as primeiras 2-3 subnets
   selected_subnets = slice(local.filtered_subnets, 0, min(3, length(local.filtered_subnets)))
   
   common_tags = {

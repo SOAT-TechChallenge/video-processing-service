@@ -18,6 +18,16 @@ variable "container_port" {
   default     = 8000
 }
 
+variable "s3_bucket_name" {
+  description = "Nome do bucket S3 compartilhado"
+  default     = "video-processor-485453072337-20260116"
+}
+
+variable "sqs_queue_url" {
+  description = "URL da fila SQS compartilhada"
+  default     = "" //https://sqs.us-east-1.amazonaws.com/485453072337/video-processing-queue
+}
+
 variable "docker_image" {
   description = "Imagem Docker"
   default     = "breno091073/video-processing-service"

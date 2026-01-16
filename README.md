@@ -29,3 +29,17 @@ Este microsserviço é responsável por:
    - terraform plan
 3. Executar plano criado
    - terraform apply
+
+## Como rodar os testes por arquivos
+
+- python -m pytest tests/test_config.py -v
+- python -m pytest tests/test_main.py -v
+- python -m pytest tests/test_s3_service.py -v
+- python -m pytest tests/test_schemas.py -v
+- python -m pytest tests/test_sqs_consumer.py -v
+- python -m pytest tests/test_utils.py -v
+- python -m pytest tests/test_video_processor.py -v
+
+## Como ver a cobertura dos testes
+
+- python -m pytest tests/ --cov=app --cov-report=term-missing
