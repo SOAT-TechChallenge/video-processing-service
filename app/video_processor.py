@@ -1,4 +1,5 @@
 import os
+import requests
 import asyncio
 import re
 import logging
@@ -22,6 +23,16 @@ from .config import S3_BUCKET_NAME, UPLOAD_DIR, OUTPUT_DIR, SQS_QUEUE_URL
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Configurações do Notification Service (Lidas do Environment do Kubernetes)
+NOTIFICATION_SERVICE_URL = os.getenv('NOTIFICATION_SERVICE_URL')
+API_TOKEN = os.getenv('API_SECURITY_INTERNAL_TOKEN')
+
+if not NOTIFICATION_SERVICE_URL:
+    logger.warning("⚠️ NOTIFICATION_SERVICE_URL não definida! Notificações não funcionarão.")
+
+if not API_TOKEN:
+    logger.error("❌ API_SECURITY_INTERNAL_TOKEN não definido! Falha de segurança crítica.")
 
 class VideoProcessor(SQSConsumer):
     def __init__(self, upload_dir: str = UPLOAD_DIR, output_dir: str = OUTPUT_DIR):
@@ -53,7 +64,42 @@ class VideoProcessor(SQSConsumer):
         if sqs_queue_url:
             logger.info(f"📫 SQS Queue: {sqs_queue_url}")
         logger.info(f"📁 Upload dir: {upload_dir}, Output dir: {output_dir}")
-    
+        logger.info(f"🔔 Notification URL: {NOTIFICATION_SERVICE_URL}")
+
+    def _send_error_email(self, email: str, title: str, error_message: str):
+        """Envia notificação de erro via HTTP para o Notification Service"""
+        if not email or not NOTIFICATION_SERVICE_URL:
+            logger.warning("⚠️ Não foi possível enviar notificação (Email ou URL ausente)")
+            return
+
+        try:
+            # Rota ajustada conforme solicitado
+            url = f"{NOTIFICATION_SERVICE_URL}/api/notification/send-email"
+            
+            # Payload ajustado (usando 'body' conforme solicitado)
+            payload = {
+                "to": email,
+                "subject": f"Falha no processamento do vídeo: {title}",
+                "body": f"Olá, infelizmente ocorreu um erro ao processar seu vídeo.\nErro: {error_message}"
+            }
+
+            headers = {
+                "Content-Type": "application/json",
+                "x-apigateway-token": API_TOKEN # Token para passar pelo ALB
+            }
+
+            logger.info(f"📧 Enviando notificação de erro para: {email}")
+            # Timeout curto (5s) para não travar o processamento se o notification cair
+            response = requests.post(url, json=payload, headers=headers, timeout=5)
+            
+            if response.status_code == 200:
+                logger.info("✅ Notificação enviada com sucesso!")
+            else:
+                logger.error(f"❌ Falha ao enviar notificação: {response.status_code} - {response.text}")
+
+        except Exception as e:
+            logger.error(f"❌ Erro crítico ao chamar Notification Service: {e}")
+
     async def process_message(self, message: Dict[str, Any]) -> bool:
         """Processa uma mensagem da fila SQS"""
         try:
@@ -62,6 +108,7 @@ class VideoProcessor(SQSConsumer):
             title = message.get('title', 'Untitled')
             description = message.get('description', '')
             uploaded_at = message.get('uploadedAt')
+            email = message.get('email') # <--- Pega o email da mensagem
             
             if not s3_key:
                 logger.error("❌ Mensagem sem s3Key")
@@ -70,6 +117,7 @@ class VideoProcessor(SQSConsumer):
             logger.info(f"📩 Nova mensagem SQS recebida:")
             logger.info(f"   📂 Arquivo: {s3_key}")
             logger.info(f"   📝 Título: {title}")
+            logger.info(f"   👤 Email: {email}")
             logger.info(f"   🕐 Uploaded at: {uploaded_at}")
             
             # Processar vídeo do S3
@@ -84,7 +132,23 @@ class VideoProcessor(SQSConsumer):
                 logger.info(f"✅ Processamento via SQS concluído: {result.get('video_id')}")
                 return True
             else:
-                logger.error(f"❌ Falha no processamento via SQS: {result.get('error')}")
+                # Lógica de Falha: Loga o erro e tenta notificar o usuário
+                error_msg = result.get('error', 'Erro desconhecido')
+                logger.error(f"❌ Falha no processamento via SQS: {error_msg}")
+                
+                if email:
+                    logger.info("🚀 Iniciando envio de notificação de erro...")
+                    # Executa o requests (síncrono) em uma thread separada para não bloquear o loop async
+                    await asyncio.get_event_loop().run_in_executor(
+                        self.executor, 
+                        self._send_error_email, 
+                        email, 
+                        title, 
+                        error_msg
+                    )
+                else:
+                    logger.warning("⚠️ Email não encontrado na mensagem, notificação pulada.")
+
                 return False
             
         except Exception as e:

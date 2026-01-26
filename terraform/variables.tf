@@ -37,3 +37,8 @@ variable "docker_image_tag" {
   description = "Tag da imagem"
   default     = "latest"
 }
+
+variable "notification_service_url" {
+  description = "DNS do Load Balancer do Notification Service"
+  type        = string
+}

@@ -24,7 +24,7 @@ output "instructions" {
   EOT
 }
 
-output "load_balancer_url" {
-  value = "http://${kubernetes_service.app.status.0.load_balancer.0.ingress.0.hostname}"
-  depends_on = [kubernetes_service.app]
+output "alb_dns_name" {
+  description = "DNS do Load Balancer (Use este endereço)"
+  value       = aws_lb.app_alb.dns_name
 }
