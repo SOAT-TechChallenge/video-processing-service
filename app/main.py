@@ -1,137 +1,107 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
-from typing import List, Optional
-import os
-import asyncio
+from typing import Optional
+from contextlib import asynccontextmanager
 import logging
 from urllib.parse import unquote
 from pathlib import Path
+import asyncio
 
 from .video_processor import VideoProcessor
 from .s3_service import S3Service
+from .email_service import EmailService
 from .config import S3_BUCKET_NAME, SQS_QUEUE_URL, print_config
-from .schemas import BatchProcessingResponse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="Video Processing Service",
-    version="2.0.0",
-)
+# Dicionário global para manter as instâncias dos serviços
+services = {}
 
-# Inicializar serviços
-processor = None
-s3_service = None
-consumer_task = None
-
-@app.on_event("startup")
-async def startup_event():
-    """Inicializa serviços na startup"""
-    global processor, s3_service, consumer_task
-    
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Gerenciador de ciclo de vida da aplicação.
+    Inicializa conexões e injeção de dependência antes da app começar.
+    """
     try:
-        # Mostrar configurações
         print_config()
         
-        # Inicializar serviços
+        # 1. Instanciar Serviços Base
         s3_service = S3Service()
-        processor = VideoProcessor()
+        email_service = EmailService() # Agora é o cliente HTTP
         
-        logger.info("✅ Serviços inicializados com sucesso")
+        # 2. Instanciar Processador injetando o EmailService
+        processor = VideoProcessor(email_service=email_service)
         
-        # Testar conexão com S3
-        try:
-            videos_count = len(s3_service.list_videos())
-            logger.info(f"📊 Conexão S3 OK. {videos_count} vídeos disponíveis")
-        except Exception as e:
-            logger.warning(f"⚠️ Aviso ao conectar com S3: {e}")
-            logger.info("💡 Configure credenciais AWS via AWS CLI ou IAM Role")
+        # 3. Guardar no dicionário global de serviços
+        services["s3"] = s3_service
+        services["email"] = email_service
+        services["processor"] = processor
         
-        # Iniciar consumidor SQS em background (se configurado)
+        logger.info("✅ Serviços inicializados e dependências injetadas")
+        
+        # 4. Iniciar Consumidor SQS em Background (se configurado)
         if SQS_QUEUE_URL:
-            logger.info(f"📫 Iniciando consumidor SQS em background...")
+            logger.info(f"📫 Iniciando tarefa do consumidor SQS...")
             consumer_task = asyncio.create_task(processor.start_sqs_consumer())
+            services["consumer_task"] = consumer_task
         else:
-            logger.info("ℹ️  Modo manual: Sem SQS configurada. Use endpoints manuais.")
+            logger.info("ℹ️ Modo manual: Sem SQS configurada.")
             
+        yield # A aplicação roda aqui
+        
     except Exception as e:
-        logger.error(f"❌ Erro na inicialização: {e}")
+        logger.error(f"❌ Erro fatal na inicialização: {e}")
+        raise e
+        
+    finally:
+        # Shutdown: Parar consumidor e limpar recursos
+        if "processor" in services:
+            services["processor"].stop_sqs_consumer()
+        
+        # Aguardar tarefa cancelar se necessário
+        if "consumer_task" in services:
+            services["consumer_task"].cancel()
+            
+        logger.info("🛑 Aplicação finalizada")
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Para serviços no shutdown"""
-    if processor:
-        processor.stop_sqs_consumer()
-    logger.info("🛑 Serviços finalizados")
+app = FastAPI(
+    title="Video Processing Service",
+    version="2.2.0",
+    lifespan=lifespan
+)
 
 @app.get("/")
 async def root():
-    """Página inicial com informações do serviço"""
     return {
         "service": "Video Processing Service",
-        "version": "2.0.0",
+        "version": "2.2.0",
         "status": "running",
-        "s3_bucket": S3_BUCKET_NAME,
-        "sqs_queue": SQS_QUEUE_URL or "Not configured",
-        "mode": "auto" if SQS_QUEUE_URL else "manual",
-        "endpoints": {
-            "POST /process/s3/{s3_key}": "Processa vídeo específico do S3",
-            "GET /s3/videos": "Lista vídeos disponíveis no bucket",
-            "GET /processed": "Lista vídeos já processados",
-            "GET /download/{filename}": "Download do ZIP processado",
-            "GET /health": "Status do serviço",
-            "GET /": "Esta página"
-        }
+        "email_service": "configured" if services.get("email") else "error",
+        "mode": "auto" if SQS_QUEUE_URL else "manual"
     }
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    status = "healthy" if processor and s3_service else "unhealthy"
-    sqs_status = "running" if SQS_QUEUE_URL and consumer_task else "not_configured"
-    
+    processor = services.get("processor")
     return {
-        "status": status,
-        "service": "video-processor",
-        "version": "2.0.0",
-        "mode": "auto" if SQS_QUEUE_URL else "manual",
-        "s3": {
-            "bucket": S3_BUCKET_NAME,
-            "connected": s3_service is not None
-        },
-        "sqs": {
-            "queue": SQS_QUEUE_URL or "not_configured",
-            "status": sqs_status
-        },
-        "processing": {
-            "ready": processor is not None,
-            "upload_dir": str(processor.upload_dir) if processor else None,
-            "output_dir": str(processor.output_dir) if processor else None
-        }
+        "status": "healthy" if processor else "unhealthy",
+        "sqs_connected": SQS_QUEUE_URL is not None
     }
 
 @app.get("/s3/videos")
 async def list_s3_videos(prefix: str = "videos/"):
-    """Lista vídeos disponíveis no S3 (para testes manuais)"""
     try:
-        if not s3_service:
-            raise HTTPException(status_code=500, detail="S3 Service não inicializado")
-        
-        videos = s3_service.list_videos(prefix)
-        
-        return {
-            "bucket": S3_BUCKET_NAME,
-            "prefix": prefix,
-            "count": len(videos),
-            "videos": videos,
-            "note": "Use POST /process/s3/{s3_key} para processar um vídeo"
-        }
-        
+        s3_svc = services.get("s3")
+        if not s3_svc:
+            raise HTTPException(500, "Serviço S3 indisponível")
+            
+        videos = s3_svc.list_videos(prefix)
+        return {"count": len(videos), "videos": videos}
     except Exception as e:
-        logger.error(f"❌ Erro ao listar vídeos S3: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(500, str(e))
 
 @app.post("/process/s3/{s3_key:path}")
 async def process_s3_video(
@@ -139,123 +109,69 @@ async def process_s3_video(
     background_tasks: BackgroundTasks,
     title: Optional[str] = "Unknown",
     description: Optional[str] = "",
-    user_id: Optional[str] = "manual_user"
+    email: Optional[str] = None
 ):
-    """
-    Processa um vídeo específico do S3
+    """Endpoint para testes manuais que também dispara emails"""
+    processor = services.get("processor")
+    email_svc = services.get("email")
     
-    Exemplo: POST /process/s3/videos/meu_video.mp4?title=Meu%20Video
-    """
-    try:
-        if not processor:
-            raise HTTPException(status_code=500, detail="Processor não inicializado")
-        
-        logger.info(f"🎬 Recebido pedido manual para processar: {s3_key}")
-        
-        # Processar em background para não bloquear a resposta
-        async def process_async():
-            result = await processor.process_video_from_s3(
-                s3_key=s3_key,
-                title=title,
-                description=description,
-                user_id=user_id,
-                source="manual_api"
-            )
-            
-            logger.info(f"📊 Resultado do processamento manual: {result.get('status')}")
-            
-            if result.get("status") == "completed":
-                logger.info(f"✅ ZIP criado: {result.get('zip_filename')}")
-            else:
-                logger.error(f"❌ Falha: {result.get('error')}")
-        
-        # Adicionar à fila de tarefas em background
-        background_tasks.add_task(process_async)
-        
-        return JSONResponse(
-            content={
-                "message": "Processamento iniciado em background",
-                "s3_key": s3_key,
-                "bucket": S3_BUCKET_NAME,
-                "title": title,
-                "status": "processing",
-                "tracking": {
-                    "check_status": f"GET /processed para ver arquivos processados",
-                    "download": f"GET /download/{{filename}} quando pronto"
-                }
-            },
-            status_code=202  # Accepted
+    if not processor:
+        raise HTTPException(500, "Processor indisponível")
+
+    logger.info(f"🎬 Pedido manual recebido: {s3_key}")
+
+    async def process_async():
+        # Processa
+        result = await processor.process_video_from_s3(
+            s3_key=s3_key,
+            title=title,
+            description=description,
+            source="manual_api"
         )
         
-    except Exception as e:
-        logger.error(f"❌ Erro ao iniciar processamento: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Notifica se tiver email
+        if email and email_svc:
+            if result.get("status") == "completed":
+                await email_svc.send_process_completion(
+                    email, title, result.get('zip_filename')
+                )
+            else:
+                await email_svc.send_process_error(
+                    email, title, result.get('error')
+                )
+    
+    background_tasks.add_task(process_async)
+    
+    return JSONResponse(
+        content={"message": "Processamento iniciado", "s3_key": s3_key, "email": email},
+        status_code=202
+    )
 
 @app.get("/processed")
 async def list_processed_files():
-    """Lista todos os arquivos processados disponíveis"""
-    try:
-        if not processor:
-            raise HTTPException(status_code=500, detail="Processor não inicializado")
-        
-        files = processor.get_processed_files()
-        
-        return {
-            "count": len(files),
-            "files": files,
-            "note": "Use GET /download/{filename} para baixar"
-        }
-        
-    except Exception as e:
-        logger.error(f"❌ Erro ao listar arquivos processados: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    processor = services.get("processor")
+    if not processor:
+        raise HTTPException(500, "Processor indisponível")
+    return {"files": processor.get_processed_files()}
 
 @app.get("/download/{filename:path}")
 async def download_zip(filename: str):
-    """Endpoint para download do arquivo ZIP processado"""
-    try:
-        # Decodificar URL
-        filename = unquote(filename)
+    processor = services.get("processor")
+    if not processor:
+        raise HTTPException(500, "Processor indisponível")
         
-        # Extrair apenas o nome do arquivo
-        filename = Path(filename).name
-        
-        # Construir caminho completo
-        if not processor:
-            raise HTTPException(status_code=500, detail="Processor não inicializado")
-        
-        file_path = processor.output_dir / filename
-        
-        if not file_path.exists():
-            available_files = processor.get_processed_files()
-            available_names = [f["filename"] for f in available_files]
-            
-            raise HTTPException(
-                status_code=404, 
-                detail={
-                    "message": f"Arquivo não encontrado: {filename}",
-                    "available_files": available_names
-                }
-            )
-        
-        return FileResponse(
-            path=file_path,
-            filename=filename,
-            media_type='application/zip',
-            headers={
-                "Content-Disposition": f"attachment; filename={filename}",
-                "X-File-Size": str(file_path.stat().st_size)
-            }
-        )
-        
-    except Exception as e:
-        logger.error(f"❌ Erro no download: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/processed-files")
-async def processed_files_compat():
-    """Endpoint de compatibilidade (seus testes existentes)"""
-    return await list_processed_files()
+    filename = unquote(filename)
+    filename = Path(filename).name
+    file_path = processor.output_dir / filename
+    
+    if not file_path.exists():
+        raise HTTPException(404, "Arquivo não encontrado")
+    
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type='application/zip'
+    )
 
 if __name__ == "__main__":
     import uvicorn

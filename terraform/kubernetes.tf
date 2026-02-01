@@ -1,25 +1,22 @@
-# kubernetes.tf
+# --- AUTENTICAÇÃO NO NOVO CLUSTER ---
+data "aws_eks_cluster_auth" "cluster_auth" {
+  name = aws_eks_cluster.main.name
+}
+
 provider "kubernetes" {
   host                   = aws_eks_cluster.main.endpoint
   cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
   token                  = data.aws_eks_cluster_auth.cluster_auth.token
-
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
-    command     = "aws"
-  }
 }
 
+# --- NAMESPACE & CONFIGS ---
 resource "kubernetes_namespace" "app" {
   metadata {
     name = var.app_name
   }
-
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [aws_eks_node_group.main] # Espera o Node Group estar pronto
 }
 
-# Secret com credenciais AWS (do seu .env)
 resource "kubernetes_secret" "aws_credentials" {
   metadata {
     name      = "aws-credentials"
@@ -27,15 +24,13 @@ resource "kubernetes_secret" "aws_credentials" {
   }
 
   data = {
-    AWS_ACCESS_KEY_ID     = ""
-    AWS_SECRET_ACCESS_KEY = ""
-    AWS_SESSION_TOKEN     = ""
+    AWS_ACCESS_KEY_ID     = var.aws_access_key_id
+    AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
+    AWS_SESSION_TOKEN     = var.aws_session_token
   }
-
   type = "Opaque"
 }
 
-# ConfigMap com configurações da aplicação
 resource "kubernetes_config_map" "app_config" {
   metadata {
     name      = "${var.app_name}-config"
@@ -43,23 +38,17 @@ resource "kubernetes_config_map" "app_config" {
   }
 
   data = {
-    # AWS Configuration (do seu .env)
-    S3_BUCKET_NAME = "video-processor-485453072337-20260116"
-    SQS_QUEUE_URL  = "" //https://sqs.us-east-1.amazonaws.com/485453072337/video-processing-queue
-    
-    # Application Settings
-    AWS_REGION          = "us-east-1"
-    UPLOAD_DIR          = "/app/uploads"
-    OUTPUT_DIR          = "/app/outputs"
-    LOG_LEVEL           = "INFO"
-    FRAMES_PER_SECOND   = "1"
-    MAX_WORKERS         = "5"
+    AWS_S3_BUCKET               = var.aws_s3_bucket
+    AWS_SQS_QUEUE_URL           = var.aws_sqs_queue_url
+    NOTIFICATION_SERVICE_URL    = var.notification_service_url
+    AWS_REGION                  = var.aws_region
+    SERVER_PORT                 = "8000"
+    LOG_LEVEL                   = "INFO"
+    API_SECURITY_INTERNAL_TOKEN = "tech-challenge-hackathon"
   }
-
-  depends_on = [kubernetes_namespace.app]
 }
 
-# Deployment da aplicação
+# --- DEPLOYMENT ---
 resource "kubernetes_deployment" "app" {
   metadata {
     name      = var.app_name
@@ -67,38 +56,34 @@ resource "kubernetes_deployment" "app" {
   }
 
   spec {
-    replicas = 2
-
+    replicas = 1
     selector {
       match_labels = {
         app = var.app_name
       }
     }
-
     template {
       metadata {
         labels = {
           app = var.app_name
         }
       }
-
       spec {
         container {
           name  = var.app_name
           image = "${var.docker_image}:${var.docker_image_tag}"
-          
+
           port {
             container_port = var.container_port
           }
 
-          # Configurações do ConfigMap
           env_from {
             config_map_ref {
               name = kubernetes_config_map.app_config.metadata[0].name
             }
           }
 
-          # Credenciais AWS do Secret
+          # Credenciais AWS
           env {
             name = "AWS_ACCESS_KEY_ID"
             value_from {
@@ -108,7 +93,6 @@ resource "kubernetes_deployment" "app" {
               }
             }
           }
-          
           env {
             name = "AWS_SECRET_ACCESS_KEY"
             value_from {
@@ -118,7 +102,6 @@ resource "kubernetes_deployment" "app" {
               }
             }
           }
-          
           env {
             name = "AWS_SESSION_TOKEN"
             value_from {
@@ -128,48 +111,22 @@ resource "kubernetes_deployment" "app" {
               }
             }
           }
-          
-          # Garantir variáveis regionais
           env {
             name  = "AWS_DEFAULT_REGION"
-            value = "us-east-1"
+            value = var.aws_region
           }
-          
           env {
             name  = "AWS_REGION"
-            value = "us-east-1"
+            value = var.aws_region
           }
 
-          # Volume mounts
-          volume_mount {
-            name       = "uploads"
-            mount_path = "/app/uploads"
-          }
-
-          volume_mount {
-            name       = "outputs"
-            mount_path = "/app/outputs"
-          }
-
-          # Resources
-          resources {
-            limits = {
-              cpu    = "1000m"
-              memory = "1Gi"
-            }
-            requests = {
-              cpu    = "500m"
-              memory = "512Mi"
-            }
-          }
-
-          # Health checks
+          # Probes para FastAPI
           liveness_probe {
             http_get {
               path = "/health"
               port = var.container_port
             }
-            initial_delay_seconds = 30
+            initial_delay_seconds = 60
             period_seconds        = 10
           }
 
@@ -178,32 +135,27 @@ resource "kubernetes_deployment" "app" {
               path = "/health"
               port = var.container_port
             }
-            initial_delay_seconds = 5
+            initial_delay_seconds = 10
             period_seconds        = 5
           }
-        }
 
-        # Volumes
-        volume {
-          name = "uploads"
-          empty_dir {}
-        }
-
-        volume {
-          name = "outputs"
-          empty_dir {}
+          resources {
+            limits = {
+              cpu    = "1000m"
+              memory = "2048Mi"
+            }
+            requests = {
+              cpu    = "500m"
+              memory = "1024Mi"
+            }
+          }
         }
       }
     }
   }
-
-  depends_on = [
-    kubernetes_config_map.app_config,
-    kubernetes_secret.aws_credentials
-  ]
+  depends_on = [kubernetes_config_map.app_config, kubernetes_secret.aws_credentials]
 }
 
-# Service LoadBalancer
 resource "kubernetes_service" "app" {
   metadata {
     name      = var.app_name
@@ -214,15 +166,12 @@ resource "kubernetes_service" "app" {
     selector = {
       app = var.app_name
     }
-
+    type = "NodePort"
     port {
       port        = 80
       target_port = var.container_port
-      protocol    = "TCP"
+      node_port   = local.node_port # 30008
     }
-
-    type = "LoadBalancer"
   }
-
   depends_on = [kubernetes_deployment.app]
 }

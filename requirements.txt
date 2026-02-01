@@ -11,6 +11,8 @@ aiofiles==23.2.1
 boto3==1.28.64
 aiobotocore==2.7.0
 aioboto3==12.0.0
+requests==2.31.0
+httpx>=0.24.0
 
 # Dependências do AWS SDK
 botocore==1.31.64

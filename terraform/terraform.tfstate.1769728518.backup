@@ -1,0 +1,1520 @@
+{
+  "version": 4,
+  "terraform_version": "1.13.3",
+  "serial": 15,
+  "lineage": "ad3fc136-44c2-ad17-6c0c-f9bf480f1bc8",
+  "outputs": {
+    "alb_dns_name": {
+      "value": "video-processor-alb-1575232880.us-east-1.elb.amazonaws.com",
+      "type": "string"
+    },
+    "cluster_name": {
+      "value": "video-processor-cluster",
+      "type": "string"
+    },
+    "instructions": {
+      "value": "\r\n✅ CLUSTER EKS CRIADO!\r\n\r\nPara configurar:\r\naws eks update-kubeconfig --name video-processor-cluster --region us-east-1\r\n\r\nPara verificar:\r\nkubectl get nodes\r\nkubectl get pods -n video-processor\r\nkubectl get svc -n video-processor\r\n\r\nURL da aplicação estará disponível no LoadBalancer.\r\n\r\n",
+      "type": "string"
+    },
+    "selected_subnets": {
+      "value": [
+        "subnet-0128a65db570e232b",
+        "subnet-00793d8c5d91d3382",
+        "subnet-08f23e428000ab0df"
+      ],
+      "type": [
+        "tuple",
+        [
+          "string",
+          "string",
+          "string"
+        ]
+      ]
+    }
+  },
+  "resources": [
+    {
+      "mode": "data",
+      "type": "aws_caller_identity",
+      "name": "current",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "account_id": "294277043425",
+            "arn": "arn:aws:sts::294277043425:assumed-role/voclabs/user4065409=leyner_henrique@hotmail.com.br",
+            "id": "294277043425",
+            "user_id": "AROAUJBCHKTQSDSFNJPBZ:user4065409=leyner_henrique@hotmail.com.br"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_eks_cluster_auth",
+      "name": "cluster_auth",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "video-processor-cluster",
+            "name": "video-processor-cluster",
+            "token": "k8s-aws-v1.aHR0cHM6Ly9zdHMudXMtZWFzdC0xLmFtYXpvbmF3cy5jb20vP0FjdGlvbj1HZXRDYWxsZXJJZGVudGl0eSZWZXJzaW9uPTIwMTEtMDYtMTUmWC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BU0lBVUpCQ0hLVFFZS1JES0VCVyUyRjIwMjYwMTI5JTJGdXMtZWFzdC0xJTJGc3RzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyNjAxMjlUMjIzNjUwWiZYLUFtei1FeHBpcmVzPTAmWC1BbXotU2VjdXJpdHktVG9rZW49SVFvSmIzSnBaMmx1WDJWakVNYiUyRiUyRiUyRiUyRiUyRiUyRiUyRiUyRiUyRiUyRndFYUNYVnpMWGRsYzNRdE1pSklNRVlDSVFEUXhNYTBVM0F5a3YxcSUyRmFSU2VhNnglMkZDdzNHT1lDZDE1WDdpJTJGREtvSWRjUUloQU5QUUNFcWc3b1d3MDdyYVE3JTJGZkVua3R6clBUakZCRlVrZjRFWFNCU1d0TEtzRUNDSSUyRiUyRiUyRiUyRiUyRiUyRiUyRiUyRiUyRiUyRiUyRndFUUFSb01NamswTWpjM01EUXpOREkxSWd4ZjFSVjFlNEtYRldTZ3lZSXFsUUtnTWpVQkRQNGw3RU11bEV6blZQMm1HdUVmUGlFZzNONFF0QlRhSEY2MDJ0ekluOVU4RlJBOEltQ0JLTXhBdmJGQSUyQm1WOHo4bnljRTlCYzlYUzlUcTIwNSUyQkdyYlI4Smhzd1pvZWZneDh6bjRKZHc0OVE5UkxYaHhyZVp5dmUlMkJ6eVl4bk1ua3ZoYmVock0xSlY4VjdSQWJVTTE0R3NUZkNuNFpxWmp4azE1JTJGalpIVDdxUDhuelExeWNsMmtkNGZCMVM3RUp2ckRMaVhvTzRPbXpCTVo5SmQxYjVOeHlPRW9NRzdpUDNDelclMkJTc0I0UDRyRm5BeVpYc216aDhQUHVKazJtUDREM0clMkJlbiUyRno3SDhoazRvTiUyRkN0UUZrcFFoYzlqU3hIYlJ0VGR3alpLWDZYcyUyQldOU2tvVnNTTlU5dEtFUHJTWVg5NUdiZ0dMSW0zT25NcmxnUjlYZzc4UERnRjFHUmVYU0xBUlNBcXlncWRnWW1NTTJ2NzhzR09wd0IlMkJuYXVBaEUyOWlzNm5jUXZkRnlxWWtoaXBHUTg4ZiUyRnZWS0tUUUs4Y3JtSmtYTkRmVEpWanVxJTJGUGYwUWlFVFJUNjhIWnlvN2hQUWdNOVVTQ3pQUDFFY0NqQnJXeGVEJTJCUUdweGtUcVR1MVhOaW53c0I5bXA5TFlZUllINHpGcWl4M25VcWF3a3dwZENQQUV0c0p1aWdYT3NRZ2FYNk14a1ZxNzB3UnN5SmZSJTJGV2VmVVNLcFdodXBhMjQ0cyUyQkNiYnltRVNTVk1NUkZkcWhxaHFOJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCUzQngtazhzLWF3cy1pZCZYLUFtei1TaWduYXR1cmU9ODZkY2QwNjcyNjVlN2RhMzEwMmFjNWNmZDc1ZjFjZjNiMDU5ODY0NjY5MDMyMWFhZGU2YmY2Yzg4YjdmZmNkZg"
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "token"
+              }
+            ]
+          ],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_subnet",
+      "name": "details",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "index_key": "subnet-00793d8c5d91d3382",
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:294277043425:subnet/subnet-00793d8c5d91d3382",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "us-east-1c",
+            "availability_zone_id": "use1-az2",
+            "available_ip_address_count": 4090,
+            "cidr_block": "172.31.80.0/20",
+            "customer_owned_ipv4_pool": "",
+            "default_for_az": true,
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "filter": null,
+            "id": "subnet-00793d8c5d91d3382",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": true,
+            "outpost_arn": "",
+            "owner_id": "294277043425",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "state": "available",
+            "tags": {},
+            "timeouts": null,
+            "vpc_id": "vpc-0d35c3426445fd4e7"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        },
+        {
+          "index_key": "subnet-0128a65db570e232b",
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:294277043425:subnet/subnet-0128a65db570e232b",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "us-east-1f",
+            "availability_zone_id": "use1-az5",
+            "available_ip_address_count": 4090,
+            "cidr_block": "172.31.64.0/20",
+            "customer_owned_ipv4_pool": "",
+            "default_for_az": true,
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "filter": null,
+            "id": "subnet-0128a65db570e232b",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": true,
+            "outpost_arn": "",
+            "owner_id": "294277043425",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "state": "available",
+            "tags": {},
+            "timeouts": null,
+            "vpc_id": "vpc-0d35c3426445fd4e7"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        },
+        {
+          "index_key": "subnet-06f17070096b56c36",
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:294277043425:subnet/subnet-06f17070096b56c36",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "us-east-1e",
+            "availability_zone_id": "use1-az3",
+            "available_ip_address_count": 4091,
+            "cidr_block": "172.31.48.0/20",
+            "customer_owned_ipv4_pool": "",
+            "default_for_az": true,
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "filter": null,
+            "id": "subnet-06f17070096b56c36",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": true,
+            "outpost_arn": "",
+            "owner_id": "294277043425",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "state": "available",
+            "tags": {},
+            "timeouts": null,
+            "vpc_id": "vpc-0d35c3426445fd4e7"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        },
+        {
+          "index_key": "subnet-08a0f5a61e5145a72",
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:294277043425:subnet/subnet-08a0f5a61e5145a72",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "us-east-1a",
+            "availability_zone_id": "use1-az6",
+            "available_ip_address_count": 4091,
+            "cidr_block": "172.31.32.0/20",
+            "customer_owned_ipv4_pool": "",
+            "default_for_az": true,
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "filter": null,
+            "id": "subnet-08a0f5a61e5145a72",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": true,
+            "outpost_arn": "",
+            "owner_id": "294277043425",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "state": "available",
+            "tags": {},
+            "timeouts": null,
+            "vpc_id": "vpc-0d35c3426445fd4e7"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        },
+        {
+          "index_key": "subnet-08f23e428000ab0df",
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:294277043425:subnet/subnet-08f23e428000ab0df",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "us-east-1b",
+            "availability_zone_id": "use1-az1",
+            "available_ip_address_count": 4091,
+            "cidr_block": "172.31.0.0/20",
+            "customer_owned_ipv4_pool": "",
+            "default_for_az": true,
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "filter": null,
+            "id": "subnet-08f23e428000ab0df",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": true,
+            "outpost_arn": "",
+            "owner_id": "294277043425",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "state": "available",
+            "tags": {},
+            "timeouts": null,
+            "vpc_id": "vpc-0d35c3426445fd4e7"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        },
+        {
+          "index_key": "subnet-0a88b315702d732d7",
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:294277043425:subnet/subnet-0a88b315702d732d7",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "us-east-1d",
+            "availability_zone_id": "use1-az4",
+            "available_ip_address_count": 4091,
+            "cidr_block": "172.31.16.0/20",
+            "customer_owned_ipv4_pool": "",
+            "default_for_az": true,
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "filter": null,
+            "id": "subnet-0a88b315702d732d7",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": true,
+            "outpost_arn": "",
+            "owner_id": "294277043425",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "state": "available",
+            "tags": {},
+            "timeouts": null,
+            "vpc_id": "vpc-0d35c3426445fd4e7"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_subnets",
+      "name": "all",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "filter": [
+              {
+                "name": "vpc-id",
+                "values": [
+                  "vpc-0d35c3426445fd4e7"
+                ]
+              }
+            ],
+            "id": "us-east-1",
+            "ids": [
+              "subnet-0128a65db570e232b",
+              "subnet-00793d8c5d91d3382",
+              "subnet-06f17070096b56c36",
+              "subnet-08f23e428000ab0df",
+              "subnet-0a88b315702d732d7",
+              "subnet-08a0f5a61e5145a72"
+            ],
+            "tags": null,
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_vpc",
+      "name": "default",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:294277043425:vpc/vpc-0d35c3426445fd4e7",
+            "cidr_block": "172.31.0.0/16",
+            "cidr_block_associations": [
+              {
+                "association_id": "vpc-cidr-assoc-0ce44b2e5f2bd4b66",
+                "cidr_block": "172.31.0.0/16",
+                "state": "associated"
+              }
+            ],
+            "default": true,
+            "dhcp_options_id": "dopt-06ebdbb14cf373c6b",
+            "enable_dns_hostnames": true,
+            "enable_dns_support": true,
+            "enable_network_address_usage_metrics": false,
+            "filter": null,
+            "id": "vpc-0d35c3426445fd4e7",
+            "instance_tenancy": "default",
+            "ipv6_association_id": "",
+            "ipv6_cidr_block": "",
+            "main_route_table_id": "rtb-0d98a1df7436876e3",
+            "owner_id": "294277043425",
+            "state": null,
+            "tags": {},
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_autoscaling_attachment",
+      "name": "eks_nodes_to_tg",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "autoscaling_group_name": "eks-processing-nodegroup-42ce05f3-6c51-3b8d-8924-d06c44b9a6f4",
+            "elb": null,
+            "id": "eks-processing-nodegroup-42ce05f3-6c51-3b8d-8924-d06c44b9a6f4-20260129223841790300000002",
+            "lb_target_group_arn": "arn:aws:elasticloadbalancing:us-east-1:294277043425:targetgroup/video-processor-tg/269400214d0c2d69"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "aws_eks_cluster.main",
+            "aws_eks_node_group.main",
+            "aws_lb_target_group.app_tg",
+            "aws_security_group.alb_sg",
+            "aws_security_group.eks_cluster",
+            "data.aws_caller_identity.current",
+            "data.aws_subnet.details",
+            "data.aws_subnets.all",
+            "data.aws_vpc.default"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_eks_cluster",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "access_config": [
+              {
+                "authentication_mode": "CONFIG_MAP",
+                "bootstrap_cluster_creator_admin_permissions": true
+              }
+            ],
+            "arn": "arn:aws:eks:us-east-1:294277043425:cluster/video-processor-cluster",
+            "bootstrap_self_managed_addons": true,
+            "certificate_authority": [
+              {
+                "data": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJYUZzcXljYVJYK1V3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TmpBeE1qa3lNakk1TVRKYUZ3MHpOakF4TWpjeU1qTTBNVEphTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUURGSjRDT3ZaUmlrNVNhdG1tMk9rVHNnWjBmVUxLVEVQempYY0VOV2tOMnNOak9kOTNKcHRjallCVGcKcjVpbjBTZWhNdmxZREs1alk1cXpRMDVmb1ZULzIxT0Y0b3N2UHd4aFk0TEJ1SlFHWXNPQmxzWVNuajZYZ0ZudApUQmN2aHlUZk12djhidUg1M3JXUzBQMGcrUlJBS0ZxMHlKTzJuNkM3U3NXLzI1Nk1ObE1ZemdIZmtFNjFsNmJUClpFQ05xS09XblpKLzZ1OHFhS3puOGdZQmZ2V0NZTms0K3hyVXRJOVc0cUJTTExOempYMnFML29iblM0MVA3VWgKb0JZMlF2NXYrQTFBcWdxVUI2bEllZUJPVitta0pkWHdGVWl5Rm1MdTVYS2RFS056Q2ZvdktFdXlBQnVaRXFwZQozWjViRmRncU4vYmxlaXNBVVJUcmMwMkpnMzJYQWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJUR0VLdVgwZ0dTVGFWOWxxV3lleVdjMnBvQXBqQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQ2hvOHlzc2c3MgprM1NsMzVQbGRLM24raTJ0VWlIM0xBUHp6ZWs3a0dxREh2UDYzTFVsTEtQWWIyclEyMmtsQVdaeDloREVkTy9rCjZFMDFYcWJ2c2tZYm1uaVFOMmh1RFFxQUtuTHUvNDZ0Y1p6SDdBcU5WMTErcnB4UDdsNjhKdUk2K2ZVK0FJYi8KblJNZlZpWTIzeGhkRXpKV2xtSjcvQUJVdXp3NVR1TGs2Y28yODhLbGMyZ3kvcE9uaUVzZjZrSGVLM2gzMzdTTQoySWxZWDlnZG9wOUpkS0xhQXE5ZzdSSHp6bFN1QjB1dnBrWHE4YWk1d0xPWllUOE9xRGlTbzB6c2RSYktRd3hxCng1OGdzeHhvdzh3QVVmNHJVUk1rVjRaSXhTT0NlckdsNEQ5SmdlcWN4T2xudEk4K1dobE1td1pQcmp6cXp2UmMKQlQrZ2NiNzkrODhECi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+              }
+            ],
+            "cluster_id": null,
+            "compute_config": [],
+            "created_at": "2026-01-29T22:29:54Z",
+            "enabled_cluster_log_types": null,
+            "encryption_config": [],
+            "endpoint": "https://2FC9D430CCB23DF25C9622975B8B4916.gr7.us-east-1.eks.amazonaws.com",
+            "force_update_version": null,
+            "id": "video-processor-cluster",
+            "identity": [
+              {
+                "oidc": [
+                  {
+                    "issuer": "https://oidc.eks.us-east-1.amazonaws.com/id/2FC9D430CCB23DF25C9622975B8B4916"
+                  }
+                ]
+              }
+            ],
+            "kubernetes_network_config": [
+              {
+                "elastic_load_balancing": [
+                  {
+                    "enabled": false
+                  }
+                ],
+                "ip_family": "ipv4",
+                "service_ipv4_cidr": "10.100.0.0/16",
+                "service_ipv6_cidr": ""
+              }
+            ],
+            "name": "video-processor-cluster",
+            "outpost_config": [],
+            "platform_version": "eks.13",
+            "remote_network_config": [],
+            "role_arn": "arn:aws:iam::294277043425:role/LabRole",
+            "status": "ACTIVE",
+            "storage_config": [],
+            "tags": {
+              "Project": "video-processor"
+            },
+            "tags_all": {
+              "Project": "video-processor"
+            },
+            "timeouts": null,
+            "upgrade_policy": [
+              {
+                "support_type": "EXTENDED"
+              }
+            ],
+            "version": "1.34",
+            "vpc_config": [
+              {
+                "cluster_security_group_id": "sg-037cb06e590994231",
+                "endpoint_private_access": false,
+                "endpoint_public_access": true,
+                "public_access_cidrs": [
+                  "0.0.0.0/0"
+                ],
+                "security_group_ids": [
+                  "sg-04f152cf9fbc8e06c"
+                ],
+                "subnet_ids": [
+                  "subnet-00793d8c5d91d3382",
+                  "subnet-0128a65db570e232b",
+                  "subnet-08f23e428000ab0df"
+                ],
+                "vpc_id": "vpc-0d35c3426445fd4e7"
+              }
+            ],
+            "zonal_shift_config": []
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAwLCJkZWxldGUiOjkwMDAwMDAwMDAwMCwidXBkYXRlIjozNjAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "aws_security_group.alb_sg",
+            "aws_security_group.eks_cluster",
+            "data.aws_caller_identity.current",
+            "data.aws_subnet.details",
+            "data.aws_subnets.all",
+            "data.aws_vpc.default"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_eks_node_group",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "ami_type": "AL2023_x86_64_STANDARD",
+            "arn": "arn:aws:eks:us-east-1:294277043425:nodegroup/video-processor-cluster/processing-nodegroup/42ce05f3-6c51-3b8d-8924-d06c44b9a6f4",
+            "capacity_type": "ON_DEMAND",
+            "cluster_name": "video-processor-cluster",
+            "disk_size": 20,
+            "force_update_version": null,
+            "id": "video-processor-cluster:processing-nodegroup",
+            "instance_types": [
+              "t3.medium"
+            ],
+            "labels": null,
+            "launch_template": [],
+            "node_group_name": "processing-nodegroup",
+            "node_group_name_prefix": "",
+            "node_repair_config": [],
+            "node_role_arn": "arn:aws:iam::294277043425:role/LabRole",
+            "release_version": "1.34.2-20260120",
+            "remote_access": [],
+            "resources": [
+              {
+                "autoscaling_groups": [
+                  {
+                    "name": "eks-processing-nodegroup-42ce05f3-6c51-3b8d-8924-d06c44b9a6f4"
+                  }
+                ],
+                "remote_access_security_group_id": ""
+              }
+            ],
+            "scaling_config": [
+              {
+                "desired_size": 1,
+                "max_size": 2,
+                "min_size": 1
+              }
+            ],
+            "status": "ACTIVE",
+            "subnet_ids": [
+              "subnet-00793d8c5d91d3382",
+              "subnet-0128a65db570e232b",
+              "subnet-08f23e428000ab0df"
+            ],
+            "tags": {
+              "Project": "video-processor"
+            },
+            "tags_all": {
+              "Project": "video-processor"
+            },
+            "taint": [],
+            "timeouts": null,
+            "update_config": [
+              {
+                "max_unavailable": 1,
+                "max_unavailable_percentage": 0
+              }
+            ],
+            "version": "1.34"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozNjAwMDAwMDAwMDAwLCJkZWxldGUiOjM2MDAwMDAwMDAwMDAsInVwZGF0ZSI6MzYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_eks_cluster.main",
+            "aws_security_group.alb_sg",
+            "aws_security_group.eks_cluster",
+            "data.aws_caller_identity.current",
+            "data.aws_subnet.details",
+            "data.aws_subnets.all",
+            "data.aws_vpc.default"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_lb",
+      "name": "app_alb",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "access_logs": [
+              {
+                "bucket": "",
+                "enabled": false,
+                "prefix": ""
+              }
+            ],
+            "arn": "arn:aws:elasticloadbalancing:us-east-1:294277043425:loadbalancer/app/video-processor-alb/16c63d9c9f2a7c64",
+            "arn_suffix": "app/video-processor-alb/16c63d9c9f2a7c64",
+            "client_keep_alive": 3600,
+            "connection_logs": [
+              {
+                "bucket": "",
+                "enabled": false,
+                "prefix": ""
+              }
+            ],
+            "customer_owned_ipv4_pool": "",
+            "desync_mitigation_mode": "defensive",
+            "dns_name": "video-processor-alb-1575232880.us-east-1.elb.amazonaws.com",
+            "dns_record_client_routing_policy": null,
+            "drop_invalid_header_fields": false,
+            "enable_cross_zone_load_balancing": true,
+            "enable_deletion_protection": false,
+            "enable_http2": true,
+            "enable_tls_version_and_cipher_suite_headers": false,
+            "enable_waf_fail_open": false,
+            "enable_xff_client_port": false,
+            "enable_zonal_shift": false,
+            "enforce_security_group_inbound_rules_on_private_link_traffic": "",
+            "id": "arn:aws:elasticloadbalancing:us-east-1:294277043425:loadbalancer/app/video-processor-alb/16c63d9c9f2a7c64",
+            "idle_timeout": 60,
+            "internal": false,
+            "ip_address_type": "ipv4",
+            "ipam_pools": [],
+            "load_balancer_type": "application",
+            "minimum_load_balancer_capacity": [],
+            "name": "video-processor-alb",
+            "name_prefix": "",
+            "preserve_host_header": false,
+            "security_groups": [
+              "sg-0b852d84018992872"
+            ],
+            "subnet_mapping": [
+              {
+                "allocation_id": "",
+                "ipv6_address": "",
+                "outpost_id": "",
+                "private_ipv4_address": "",
+                "subnet_id": "subnet-00793d8c5d91d3382"
+              },
+              {
+                "allocation_id": "",
+                "ipv6_address": "",
+                "outpost_id": "",
+                "private_ipv4_address": "",
+                "subnet_id": "subnet-0128a65db570e232b"
+              },
+              {
+                "allocation_id": "",
+                "ipv6_address": "",
+                "outpost_id": "",
+                "private_ipv4_address": "",
+                "subnet_id": "subnet-08f23e428000ab0df"
+              }
+            ],
+            "subnets": [
+              "subnet-00793d8c5d91d3382",
+              "subnet-0128a65db570e232b",
+              "subnet-08f23e428000ab0df"
+            ],
+            "tags": {
+              "Project": "video-processor"
+            },
+            "tags_all": {
+              "Project": "video-processor"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0d35c3426445fd4e7",
+            "xff_header_processing_mode": "append",
+            "zone_id": "Z35SXDOTRQ7X7K"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_security_group.alb_sg",
+            "data.aws_subnet.details",
+            "data.aws_subnets.all",
+            "data.aws_vpc.default"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_lb_listener",
+      "name": "http",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "alpn_policy": null,
+            "arn": "arn:aws:elasticloadbalancing:us-east-1:294277043425:listener/app/video-processor-alb/16c63d9c9f2a7c64/da6fb8d1527af3c8",
+            "certificate_arn": null,
+            "default_action": [
+              {
+                "authenticate_cognito": [],
+                "authenticate_oidc": [],
+                "fixed_response": [
+                  {
+                    "content_type": "text/plain",
+                    "message_body": "Acesso Direto Negado. Use o API Gateway.",
+                    "status_code": "403"
+                  }
+                ],
+                "forward": [],
+                "order": 1,
+                "redirect": [],
+                "target_group_arn": "",
+                "type": "fixed-response"
+              }
+            ],
+            "id": "arn:aws:elasticloadbalancing:us-east-1:294277043425:listener/app/video-processor-alb/16c63d9c9f2a7c64/da6fb8d1527af3c8",
+            "load_balancer_arn": "arn:aws:elasticloadbalancing:us-east-1:294277043425:loadbalancer/app/video-processor-alb/16c63d9c9f2a7c64",
+            "mutual_authentication": [],
+            "port": 80,
+            "protocol": "HTTP",
+            "routing_http_request_x_amzn_mtls_clientcert_header_name": null,
+            "routing_http_request_x_amzn_mtls_clientcert_issuer_header_name": null,
+            "routing_http_request_x_amzn_mtls_clientcert_leaf_header_name": null,
+            "routing_http_request_x_amzn_mtls_clientcert_serial_number_header_name": null,
+            "routing_http_request_x_amzn_mtls_clientcert_subject_header_name": null,
+            "routing_http_request_x_amzn_mtls_clientcert_validity_header_name": null,
+            "routing_http_request_x_amzn_tls_cipher_suite_header_name": null,
+            "routing_http_request_x_amzn_tls_version_header_name": null,
+            "routing_http_response_access_control_allow_credentials_header_value": "",
+            "routing_http_response_access_control_allow_headers_header_value": "",
+            "routing_http_response_access_control_allow_methods_header_value": "",
+            "routing_http_response_access_control_allow_origin_header_value": "",
+            "routing_http_response_access_control_expose_headers_header_value": "",
+            "routing_http_response_access_control_max_age_header_value": "",
+            "routing_http_response_content_security_policy_header_value": "",
+            "routing_http_response_server_enabled": true,
+            "routing_http_response_strict_transport_security_header_value": "",
+            "routing_http_response_x_content_type_options_header_value": "",
+            "routing_http_response_x_frame_options_header_value": "",
+            "ssl_policy": "",
+            "tags": null,
+            "tags_all": {},
+            "tcp_idle_timeout_seconds": null,
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDAsInVwZGF0ZSI6MzAwMDAwMDAwMDAwfX0=",
+          "dependencies": [
+            "aws_lb.app_alb",
+            "aws_security_group.alb_sg",
+            "data.aws_subnet.details",
+            "data.aws_subnets.all",
+            "data.aws_vpc.default"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_lb_listener_rule",
+      "name": "allow_gateway",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "action": [
+              {
+                "authenticate_cognito": [],
+                "authenticate_oidc": [],
+                "fixed_response": [],
+                "forward": [],
+                "order": 1,
+                "redirect": [],
+                "target_group_arn": "arn:aws:elasticloadbalancing:us-east-1:294277043425:targetgroup/video-processor-tg/269400214d0c2d69",
+                "type": "forward"
+              }
+            ],
+            "arn": "arn:aws:elasticloadbalancing:us-east-1:294277043425:listener-rule/app/video-processor-alb/16c63d9c9f2a7c64/da6fb8d1527af3c8/b49c3b9dcac301a4",
+            "condition": [
+              {
+                "host_header": [],
+                "http_header": [
+                  {
+                    "http_header_name": "x-apigateway-token",
+                    "values": [
+                      "tech-challenge-hackathon"
+                    ]
+                  }
+                ],
+                "http_request_method": [],
+                "path_pattern": [],
+                "query_string": [],
+                "source_ip": []
+              }
+            ],
+            "id": "arn:aws:elasticloadbalancing:us-east-1:294277043425:listener-rule/app/video-processor-alb/16c63d9c9f2a7c64/da6fb8d1527af3c8/b49c3b9dcac301a4",
+            "listener_arn": "arn:aws:elasticloadbalancing:us-east-1:294277043425:listener/app/video-processor-alb/16c63d9c9f2a7c64/da6fb8d1527af3c8",
+            "priority": 100,
+            "tags": null,
+            "tags_all": {}
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "aws_lb.app_alb",
+            "aws_lb_listener.http",
+            "aws_lb_target_group.app_tg",
+            "aws_security_group.alb_sg",
+            "data.aws_subnet.details",
+            "data.aws_subnets.all",
+            "data.aws_vpc.default"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_lb_target_group",
+      "name": "app_tg",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:elasticloadbalancing:us-east-1:294277043425:targetgroup/video-processor-tg/269400214d0c2d69",
+            "arn_suffix": "targetgroup/video-processor-tg/269400214d0c2d69",
+            "connection_termination": null,
+            "deregistration_delay": "300",
+            "health_check": [
+              {
+                "enabled": true,
+                "healthy_threshold": 2,
+                "interval": 30,
+                "matcher": "200",
+                "path": "/actuator/health",
+                "port": "traffic-port",
+                "protocol": "HTTP",
+                "timeout": 5,
+                "unhealthy_threshold": 2
+              }
+            ],
+            "id": "arn:aws:elasticloadbalancing:us-east-1:294277043425:targetgroup/video-processor-tg/269400214d0c2d69",
+            "ip_address_type": "ipv4",
+            "lambda_multi_value_headers_enabled": false,
+            "load_balancer_arns": [],
+            "load_balancing_algorithm_type": "round_robin",
+            "load_balancing_anomaly_mitigation": "off",
+            "load_balancing_cross_zone_enabled": "use_load_balancer_configuration",
+            "name": "video-processor-tg",
+            "name_prefix": "",
+            "port": 30008,
+            "preserve_client_ip": null,
+            "protocol": "HTTP",
+            "protocol_version": "HTTP1",
+            "proxy_protocol_v2": false,
+            "slow_start": 0,
+            "stickiness": [
+              {
+                "cookie_duration": 86400,
+                "cookie_name": "",
+                "enabled": false,
+                "type": "lb_cookie"
+              }
+            ],
+            "tags": null,
+            "tags_all": {},
+            "target_failover": [
+              {
+                "on_deregistration": null,
+                "on_unhealthy": null
+              }
+            ],
+            "target_group_health": [
+              {
+                "dns_failover": [
+                  {
+                    "minimum_healthy_targets_count": "1",
+                    "minimum_healthy_targets_percentage": "off"
+                  }
+                ],
+                "unhealthy_state_routing": [
+                  {
+                    "minimum_healthy_targets_count": 1,
+                    "minimum_healthy_targets_percentage": "off"
+                  }
+                ]
+              }
+            ],
+            "target_health_state": [
+              {
+                "enable_unhealthy_connection_termination": null,
+                "unhealthy_draining_interval": null
+              }
+            ],
+            "target_type": "instance",
+            "vpc_id": "vpc-0d35c3426445fd4e7"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.aws_vpc.default"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "alb_sg",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:294277043425:security-group/sg-0b852d84018992872",
+            "description": "Security group for ALB - Allow HTTP",
+            "egress": [
+              {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "description": "",
+                "from_port": 0,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "-1",
+                "security_groups": [],
+                "self": false,
+                "to_port": 0
+              }
+            ],
+            "id": "sg-0b852d84018992872",
+            "ingress": [
+              {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "description": "Allow HTTP from world",
+                "from_port": 80,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [],
+                "self": false,
+                "to_port": 80
+              }
+            ],
+            "name": "video-processor-alb-sg",
+            "name_prefix": "",
+            "owner_id": "294277043425",
+            "revoke_rules_on_delete": false,
+            "tags": {
+              "Project": "video-processor"
+            },
+            "tags_all": {
+              "Project": "video-processor"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0d35c3426445fd4e7"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6OTAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "data.aws_vpc.default"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "eks_cluster",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:294277043425:security-group/sg-04f152cf9fbc8e06c",
+            "description": "Security group for EKS cluster",
+            "egress": [
+              {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "description": "",
+                "from_port": 0,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "-1",
+                "security_groups": [],
+                "self": false,
+                "to_port": 0
+              }
+            ],
+            "id": "sg-04f152cf9fbc8e06c",
+            "ingress": [
+              {
+                "cidr_blocks": [
+                  "172.31.0.0/16"
+                ],
+                "description": "Allow pods to communicate with each other",
+                "from_port": 0,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "-1",
+                "security_groups": [],
+                "self": false,
+                "to_port": 0
+              },
+              {
+                "cidr_blocks": [
+                  "172.31.0.0/16"
+                ],
+                "description": "Allow worker nodes to communicate with cluster",
+                "from_port": 443,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [],
+                "self": false,
+                "to_port": 443
+              },
+              {
+                "cidr_blocks": [],
+                "description": "Allow ALB to access NodePort",
+                "from_port": 30008,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [
+                  "sg-0b852d84018992872"
+                ],
+                "self": false,
+                "to_port": 30008
+              }
+            ],
+            "name": "video-processor-cluster-processing-cluster-sg",
+            "name_prefix": "",
+            "owner_id": "294277043425",
+            "revoke_rules_on_delete": false,
+            "tags": {
+              "Project": "video-processor"
+            },
+            "tags_all": {
+              "Project": "video-processor"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0d35c3426445fd4e7"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6OTAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "aws_security_group.alb_sg",
+            "data.aws_vpc.default"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_config_map",
+      "name": "app_config",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "binary_data": null,
+            "data": {
+              "API_SECURITY_INTERNAL_TOKEN": "tech-challenge-hackathon",
+              "AWS_REGION": "us-east-1",
+              "AWS_S3_BUCKET": "challenge-hackathon",
+              "AWS_SQS_QUEUE_URL": "https://sqs.us-east-1.amazonaws.com/294277043425/challenge-hackathon",
+              "LOG_LEVEL": "INFO",
+              "NOTIFICATION_SERVICE_URL": "notification-service-alb-1004450262.us-east-1.elb.amazonaws.com",
+              "SERVER_PORT": "8080",
+              "SPRING_PROFILES_ACTIVE": "prod"
+            },
+            "id": "video-processor/video-processor-config",
+            "immutable": false,
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "video-processor-config",
+                "namespace": "video-processor",
+                "resource_version": "972",
+                "uid": "980dac4f-afa4-4402-ac43-a2fb98790211"
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "ConfigMap",
+            "name": "video-processor-config",
+            "namespace": "video-processor"
+          },
+          "private": "bnVsbA==",
+          "dependencies": [
+            "aws_eks_cluster.main",
+            "aws_eks_node_group.main",
+            "aws_security_group.alb_sg",
+            "aws_security_group.eks_cluster",
+            "data.aws_caller_identity.current",
+            "data.aws_eks_cluster_auth.cluster_auth",
+            "data.aws_subnet.details",
+            "data.aws_subnets.all",
+            "data.aws_vpc.default",
+            "kubernetes_namespace.app"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_deployment",
+      "name": "app",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "status": "tainted",
+          "schema_version": 1,
+          "attributes": {
+            "id": "video-processor/video-processor",
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "video-processor",
+                "namespace": "video-processor",
+                "resource_version": "",
+                "uid": ""
+              }
+            ],
+            "spec": [
+              {
+                "min_ready_seconds": 0,
+                "paused": false,
+                "progress_deadline_seconds": 600,
+                "replicas": "1",
+                "revision_history_limit": 10,
+                "selector": [
+                  {
+                    "match_expressions": [],
+                    "match_labels": {
+                      "app": "video-processor"
+                    }
+                  }
+                ],
+                "strategy": [],
+                "template": [
+                  {
+                    "metadata": [
+                      {
+                        "annotations": null,
+                        "generate_name": "",
+                        "generation": 0,
+                        "labels": {
+                          "app": "video-processor"
+                        },
+                        "name": "",
+                        "namespace": "",
+                        "resource_version": "",
+                        "uid": ""
+                      }
+                    ],
+                    "spec": [
+                      {
+                        "active_deadline_seconds": 0,
+                        "affinity": [],
+                        "automount_service_account_token": true,
+                        "container": [
+                          {
+                            "args": null,
+                            "command": null,
+                            "env": [
+                              {
+                                "name": "AWS_ACCESS_KEY_ID",
+                                "value": "",
+                                "value_from": [
+                                  {
+                                    "config_map_key_ref": [],
+                                    "field_ref": [],
+                                    "resource_field_ref": [],
+                                    "secret_key_ref": [
+                                      {
+                                        "key": "AWS_ACCESS_KEY_ID",
+                                        "name": "aws-credentials",
+                                        "optional": false
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "AWS_SECRET_ACCESS_KEY",
+                                "value": "",
+                                "value_from": [
+                                  {
+                                    "config_map_key_ref": [],
+                                    "field_ref": [],
+                                    "resource_field_ref": [],
+                                    "secret_key_ref": [
+                                      {
+                                        "key": "AWS_SECRET_ACCESS_KEY",
+                                        "name": "aws-credentials",
+                                        "optional": false
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "AWS_SESSION_TOKEN",
+                                "value": "",
+                                "value_from": [
+                                  {
+                                    "config_map_key_ref": [],
+                                    "field_ref": [],
+                                    "resource_field_ref": [],
+                                    "secret_key_ref": [
+                                      {
+                                        "key": "AWS_SESSION_TOKEN",
+                                        "name": "aws-credentials",
+                                        "optional": false
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "AWS_DEFAULT_REGION",
+                                "value": "us-east-1",
+                                "value_from": []
+                              },
+                              {
+                                "name": "AWS_REGION",
+                                "value": "us-east-1",
+                                "value_from": []
+                              }
+                            ],
+                            "env_from": [
+                              {
+                                "config_map_ref": [
+                                  {
+                                    "name": "video-processor-config",
+                                    "optional": false
+                                  }
+                                ],
+                                "prefix": "",
+                                "secret_ref": []
+                              }
+                            ],
+                            "image": "breno091073/video-processing-service:latest",
+                            "image_pull_policy": "",
+                            "lifecycle": [],
+                            "liveness_probe": [
+                              {
+                                "exec": [],
+                                "failure_threshold": 3,
+                                "grpc": [],
+                                "http_get": [],
+                                "initial_delay_seconds": 60,
+                                "period_seconds": 10,
+                                "success_threshold": 1,
+                                "tcp_socket": [
+                                  {
+                                    "port": "8000"
+                                  }
+                                ],
+                                "timeout_seconds": 5
+                              }
+                            ],
+                            "name": "video-processor",
+                            "port": [
+                              {
+                                "container_port": 8000,
+                                "host_ip": "",
+                                "host_port": 0,
+                                "name": "",
+                                "protocol": "TCP"
+                              }
+                            ],
+                            "readiness_probe": [
+                              {
+                                "exec": [],
+                                "failure_threshold": 3,
+                                "grpc": [],
+                                "http_get": [],
+                                "initial_delay_seconds": 10,
+                                "period_seconds": 5,
+                                "success_threshold": 1,
+                                "tcp_socket": [
+                                  {
+                                    "port": "8000"
+                                  }
+                                ],
+                                "timeout_seconds": 5
+                              }
+                            ],
+                            "resources": [
+                              {
+                                "limits": {
+                                  "cpu": "500m",
+                                  "memory": "1024Mi"
+                                },
+                                "requests": {
+                                  "cpu": "250m",
+                                  "memory": "512Mi"
+                                }
+                              }
+                            ],
+                            "security_context": [],
+                            "startup_probe": [],
+                            "stdin": false,
+                            "stdin_once": false,
+                            "termination_message_path": "/dev/termination-log",
+                            "termination_message_policy": "",
+                            "tty": false,
+                            "volume_device": [],
+                            "volume_mount": [],
+                            "working_dir": ""
+                          }
+                        ],
+                        "dns_config": [],
+                        "dns_policy": "ClusterFirst",
+                        "enable_service_links": true,
+                        "host_aliases": [],
+                        "host_ipc": false,
+                        "host_network": false,
+                        "host_pid": false,
+                        "hostname": "",
+                        "image_pull_secrets": [],
+                        "init_container": [],
+                        "node_name": "",
+                        "node_selector": null,
+                        "os": [],
+                        "priority_class_name": "",
+                        "readiness_gate": [],
+                        "restart_policy": "Always",
+                        "runtime_class_name": "",
+                        "scheduler_name": "",
+                        "security_context": [],
+                        "service_account_name": "",
+                        "share_process_namespace": false,
+                        "subdomain": "",
+                        "termination_grace_period_seconds": 30,
+                        "toleration": [],
+                        "topology_spread_constraint": [],
+                        "volume": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "timeouts": null,
+            "wait_for_rollout": true
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": null,
+            "kind": null,
+            "name": null,
+            "namespace": null
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9",
+          "dependencies": [
+            "aws_eks_cluster.main",
+            "aws_eks_node_group.main",
+            "aws_security_group.alb_sg",
+            "aws_security_group.eks_cluster",
+            "data.aws_caller_identity.current",
+            "data.aws_eks_cluster_auth.cluster_auth",
+            "data.aws_subnet.details",
+            "data.aws_subnets.all",
+            "data.aws_vpc.default",
+            "kubernetes_config_map.app_config",
+            "kubernetes_namespace.app",
+            "kubernetes_secret.aws_credentials"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_namespace",
+      "name": "app",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "video-processor",
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "video-processor",
+                "resource_version": "968",
+                "uid": "9a8c9feb-6503-452c-8513-76a3b8ce5289"
+              }
+            ],
+            "timeouts": null,
+            "wait_for_default_service_account": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "Namespace",
+            "name": "video-processor"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjozMDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "aws_eks_cluster.main",
+            "aws_eks_node_group.main",
+            "aws_security_group.alb_sg",
+            "aws_security_group.eks_cluster",
+            "data.aws_caller_identity.current",
+            "data.aws_eks_cluster_auth.cluster_auth",
+            "data.aws_subnet.details",
+            "data.aws_subnets.all",
+            "data.aws_vpc.default"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_secret",
+      "name": "aws_credentials",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "binary_data": null,
+            "binary_data_wo": null,
+            "binary_data_wo_revision": null,
+            "data": {
+              "AWS_ACCESS_KEY_ID": "ASIAUJBCHKTQYKRDKEBW",
+              "AWS_SECRET_ACCESS_KEY": "rgIPbm5v0UOyvZg5MDWeWK7mJMFVRSKM09jjwqxK",
+              "AWS_SESSION_TOKEN": "IQoJb3JpZ2luX2VjEMb//////////wEaCXVzLXdlc3QtMiJIMEYCIQDQxMa0U3Aykv1q/aRSea6x/Cw3GOYCd15X7i/DKoIdcQIhANPQCEqg7oWw07raQ7/fEnktzrPTjFBFUkf4EXSBSWtLKsECCI///////////wEQARoMMjk0Mjc3MDQzNDI1Igxf1RV1e4KXFWSgyYIqlQKgMjUBDP4l7EMulEznVP2mGuEfPiEg3N4QtBTaHF602tzIn9U8FRA8ImCBKMxAvbFA+mV8z8nycE9Bc9XS9Tq205+GrbR8JhswZoefgx8zn4Jdw49Q9RLXhxreZyve+zyYxnMnkvhbehrM1JV8V7RAbUM14GsTfCn4ZqZjxk15/jZHT7qP8nzQ1ycl2kd4fB1S7EJvrDLiXoO4OmzBMZ9Jd1b5NxyOEoMG7iP3CzW+SsB4P4rFnAyZXsmzh8PPuJk2mP4D3G+en/z7H8hk4oN/CtQFkpQhc9jSxHbRtTdwjZKX6Xs+WNSkoVsSNU9tKEPrSYX95GbgGLIm3OnMrlgR9Xg78PDgF1GReXSLARSAqygqdgYmMM2v78sGOpwB+nauAhE29is6ncQvdFyqYkhipGQ88f/vVKKTQK8crmJkXNDfTJVjuq/Pf0QiETRT68HZyo7hPQgM9USCzPP1EcCjBrWxeD+QGpxkTqTu1XNinwsB9mp9LYYRYH4zFqix3nUqawkwpdCPAEtsJuigXOsQgaX6MxkVq70wRsyJfR/WefUSKpWhupa244s+CbbymESSVMMRFdqhqhqN"
+            },
+            "data_wo": null,
+            "data_wo_revision": null,
+            "id": "video-processor/aws-credentials",
+            "immutable": false,
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "aws-credentials",
+                "namespace": "video-processor",
+                "resource_version": "971",
+                "uid": "fa08f51b-0a3c-40b1-9bb7-8a397de7dbc7"
+              }
+            ],
+            "timeouts": null,
+            "type": "Opaque",
+            "wait_for_service_account_token": true
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "binary_data"
+              }
+            ],
+            [
+              {
+                "type": "get_attr",
+                "value": "data"
+              }
+            ]
+          ],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "Secret",
+            "name": "aws-credentials",
+            "namespace": "video-processor"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_eks_cluster.main",
+            "aws_eks_node_group.main",
+            "aws_security_group.alb_sg",
+            "aws_security_group.eks_cluster",
+            "data.aws_caller_identity.current",
+            "data.aws_eks_cluster_auth.cluster_auth",
+            "data.aws_subnet.details",
+            "data.aws_subnets.all",
+            "data.aws_vpc.default",
+            "kubernetes_namespace.app"
+          ]
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}
