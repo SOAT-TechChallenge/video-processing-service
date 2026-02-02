@@ -1,14 +1,16 @@
 terraform {
   required_version = ">= 1.0"
+  
+  backend "s3" {
+    bucket = "challenge-hackathon"
+    key    = "video-processing/ecs-terraform.tfstate"
+    region = "us-east-1"
+  }
 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.23"
     }
   }
 }
@@ -17,9 +19,7 @@ provider "aws" {
   region = var.aws_region
 }
 
-# --- DADOS DE REDE (Reutiliza a VPC Default para evitar erro de limite de VPC) ---
-data "aws_caller_identity" "current" {}
-
+# --- Data Sources (Infraestrutura) ---
 data "aws_vpc" "default" {
   default = true
 }
@@ -31,36 +31,32 @@ data "aws_subnets" "all" {
   }
 }
 
-data "aws_subnet" "details" {
-  for_each = toset(data.aws_subnets.all.ids)
-  id       = each.value
+data "aws_iam_role" "lab_role" {
+  name = "LabRole"
 }
 
-locals {
-  # Filtra subnets que o EKS suporta na us-east-1
-  eks_supported_zones = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1f"]
+# --- BUSCA AUTOMÁTICA DA FILA SQS ---
+# O Terraform busca a fila criada pelo Uploader pelo nome fixo
+data "aws_sqs_queue" "video_queue" {
+  name = "video-processing-queue"
+}
 
-  filtered_subnets = [
-    for subnet_id in data.aws_subnets.all.ids :
-    subnet_id
-    if contains(local.eks_supported_zones, data.aws_subnet.details[subnet_id].availability_zone)
-  ]
+# --- ECR ---
+resource "aws_ecr_repository" "video_processing" {
+  name                 = "video-processing-repo"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
 
-  # Pega 2 subnets para economizar recursos no Academy
-  selected_subnets = slice(local.filtered_subnets, 0, min(2, length(local.filtered_subnets)))
-
-  common_tags = {
-    Project = var.app_name
+  image_scanning_configuration {
+    scan_on_push = true
   }
-
-  cluster_name = var.cluster_name
-  node_port    = 30008 
 }
 
-# --- SECURITY GROUPS ---
+# --- Security Groups ---
+
 resource "aws_security_group" "alb_sg" {
   name        = "${var.app_name}-alb-sg"
-  description = "Security group for ALB"
+  description = "SG do Load Balancer"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
@@ -76,41 +72,60 @@ resource "aws_security_group" "alb_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = local.common_tags
 }
 
-# --- ALB ---
-resource "aws_lb" "app_alb" {
+resource "aws_security_group" "ecs_sg" {
+  name        = "${var.app_name}-ecs-sg"
+  description = "SG da Tarefa ECS"
+  vpc_id      = data.aws_vpc.default.id
+
+  # Entrada apenas do ALB na porta 8000
+  ingress {
+    from_port       = var.container_port
+    to_port         = var.container_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+
+  # Saída Totalmente Liberada (Necessário para baixar libs, acessar S3 e SQS)
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# --- Load Balancer (ALB) ---
+
+resource "aws_lb" "processing_alb" {
   name                       = "${var.app_name}-alb"
   internal                   = false
   load_balancer_type         = "application"
   security_groups            = [aws_security_group.alb_sg.id]
-  subnets                    = local.selected_subnets
+  subnets                    = slice(data.aws_subnets.all.ids, 0, min(2, length(data.aws_subnets.all.ids)))
   enable_deletion_protection = false
-
-  tags = local.common_tags
 }
 
-resource "aws_lb_target_group" "app_tg" {
-  name     = "${var.app_name}-tg"
-  port     = local.node_port
-  protocol = "HTTP"
-  vpc_id   = data.aws_vpc.default.id
+resource "aws_lb_target_group" "processing_tg" {
+  name        = "${var.app_name}-tg"
+  port        = var.container_port
+  protocol    = "HTTP"
+  vpc_id      = data.aws_vpc.default.id
+  target_type = "ip"
 
   health_check {
-    path                = "/health"  # <--- CORRIGIDO PARA FASTAPI
-    port                = "traffic-port"
-    interval            = 30
-    timeout             = 5
+    path                = "/health" # Health Check do FastAPI
+    interval            = 60
+    timeout             = 30
     healthy_threshold   = 2
-    unhealthy_threshold = 2
+    unhealthy_threshold = 5
     matcher             = "200"
   }
 }
 
 resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.app_alb.arn
+  load_balancer_arn = aws_lb.processing_alb.arn
   port              = "80"
   protocol          = "HTTP"
 
@@ -130,7 +145,7 @@ resource "aws_lb_listener_rule" "allow_gateway" {
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app_tg.arn
+    target_group_arn = aws_lb_target_group.processing_tg.arn
   }
 
   condition {
@@ -139,4 +154,97 @@ resource "aws_lb_listener_rule" "allow_gateway" {
       values           = ["tech-challenge-hackathon"]
     }
   }
+}
+
+# --- ECS Cluster & Task ---
+
+resource "aws_ecs_cluster" "processing_cluster" {
+  name = var.cluster_name
+}
+
+resource "aws_ecs_task_definition" "processing_task" {
+  family                   = var.app_name
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 1024 
+  memory                   = 2048 
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+  task_role_arn            = data.aws_iam_role.lab_role.arn
+
+  container_definitions = jsonencode([{
+    name      = var.app_name
+    image     = "${aws_ecr_repository.video_processing.repository_url}:latest"
+    essential = true
+    
+    portMappings = [{
+      containerPort = var.container_port
+      hostPort      = var.container_port
+      protocol      = "tcp"
+    }]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = "/ecs/${var.app_name}"
+        awslogs-region        = var.aws_region
+        awslogs-stream-prefix = "ecs"
+        awslogs-create-group  = "true"
+      }
+    }
+
+    environment = [
+      { name = "SERVER_PORT", value = tostring(var.container_port) },
+      { name = "AWS_REGION", value = var.aws_region },
+      { name = "LOG_LEVEL", value = "INFO" },
+      { name = "API_SECURITY_INTERNAL_TOKEN", value = "tech-challenge-hackathon" },
+      
+      # Fila SQS (Via Data Source)
+      { name = "AWS_SQS_QUEUE_URL", value = data.aws_sqs_queue.video_queue.url },
+      
+      # Bucket S3 (Via Variable Default)
+      { name = "AWS_S3_BUCKET", value = var.aws_s3_bucket_name },
+      
+      # URL de Notificação (Via Input no Apply)
+      { name = "NOTIFICATION_SERVICE_URL", value = var.notification_service_url },
+
+      # Credenciais
+      { name = "AWS_ACCESS_KEY_ID", value = var.aws_access_key_id },
+      { name = "AWS_SECRET_ACCESS_KEY", value = var.aws_secret_access_key },
+      { name = "AWS_SESSION_TOKEN", value = var.aws_session_token }
+    ]
+  }])
+}
+
+resource "aws_ecs_service" "processing_service" {
+  name            = var.app_name
+  cluster         = aws_ecs_cluster.processing_cluster.id
+  task_definition = aws_ecs_task_definition.processing_task.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  health_check_grace_period_seconds = 300
+
+  network_configuration {
+    subnets          = slice(data.aws_subnets.all.ids, 0, min(2, length(data.aws_subnets.all.ids)))
+    security_groups  = [aws_security_group.ecs_sg.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.processing_tg.arn
+    container_name   = var.app_name
+    container_port   = var.container_port
+  }
+
+  depends_on = [aws_lb_listener_rule.allow_gateway]
+}
+
+# --- Outputs ---
+
+output "ecr_repo_url" {
+  value = aws_ecr_repository.video_processing.repository_url
+}
+
+output "api_url" {
+  value = "http://${aws_lb.processing_alb.dns_name}"
 }

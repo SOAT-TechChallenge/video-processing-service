@@ -18,14 +18,10 @@ variable "container_port" {
   default     = 8000
 }
 
-variable "aws_s3_bucket" {
-  description = "Nome do bucket S3 compartilhado"
-  default     = "challenge-hackathon"
-}
-
-variable "aws_sqs_queue_url" {
-  description = "URL da fila SQS compartilhada"
-  default     = "https://sqs.us-east-1.amazonaws.com/294277043425/challenge-hackathon"
+variable "aws_s3_bucket_name" {
+  description = "Nome do bucket S3 criado pelo Video Uploader"
+  type        = string
+  default     = "challenge-hackathon-video-assets"
 }
 
 variable "docker_image" {
