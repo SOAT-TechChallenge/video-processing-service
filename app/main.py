@@ -80,7 +80,15 @@ async def root():
         "version": "2.2.0",
         "status": "running",
         "email_service": "configured" if services.get("email") else "error",
-        "mode": "auto" if SQS_QUEUE_URL else "manual"
+        "mode": "auto" if SQS_QUEUE_URL else "manual",
+        "endpoints": {
+            "POST /process/s3/{s3_key}": "Processa vídeo específico do S3",
+            "GET /s3/videos": "Lista vídeos disponíveis no bucket",
+            "GET /processed": "Lista vídeos já processados",
+            "GET /download/{filename}": "Download do ZIP processado",
+            "GET /health": "Status do serviço",
+            "GET /": "Esta página"
+        }
     }
 
 @app.get("/health")

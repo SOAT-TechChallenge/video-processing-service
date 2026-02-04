@@ -199,10 +199,10 @@ resource "aws_ecs_task_definition" "processing_task" {
       { name = "API_SECURITY_INTERNAL_TOKEN", value = "tech-challenge-hackathon" },
       
       # Fila SQS (Via Data Source)
-      { name = "AWS_SQS_QUEUE_URL", value = data.aws_sqs_queue.video_queue.url },
+      { name = "SQS_QUEUE_URL", value = data.aws_sqs_queue.video_queue.url },
       
       # Bucket S3 (Via Variable Default)
-      { name = "AWS_S3_BUCKET", value = var.aws_s3_bucket_name },
+      { name = "S3_BUCKET_NAME", value = var.aws_s3_bucket_name },
       
       # URL de Notificação (Via Input no Apply)
       { name = "NOTIFICATION_SERVICE_URL", value = var.notification_service_url },

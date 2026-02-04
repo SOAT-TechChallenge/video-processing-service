@@ -21,7 +21,7 @@ variable "container_port" {
 variable "aws_s3_bucket_name" {
   description = "Nome do bucket S3 criado pelo Video Uploader"
   type        = string
-  default     = "challenge-hackathon-video-assets"
+  default     = "video-storage-d4759b83"
 }
 
 variable "docker_image" {
