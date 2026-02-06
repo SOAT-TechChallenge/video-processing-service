@@ -2,11 +2,12 @@
 
 [![CI/CD](https://github.com/your-username/video-processing-service/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/your-username/video-processing-service/actions/workflows/ci-cd.yml)
 [![Coverage](https://codecov.io/gh/your-username/video-processing-service/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/video-processing-service)
-[![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-green.svg)](https://fastapi.tiangolo.com/)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
+[![AWS](https://img.shields.io/badge/AWS-ECS-orange.svg)](https://aws.amazon.com/)
 
-Microsserviço de processamento de vídeos desenvolvido com FastAPI, responsável por extrair frames de vídeos e gerar arquivos ZIP compactados. Suporta processamento manual via API e automático via SQS.
+> Microsserviço de processamento de vídeos com FastAPI que extrai frames de vídeos e gera arquivos ZIP compactados. Suporta processamento manual via API REST e automático via SQS.
 
 ## 📋 Sumário
 
@@ -36,23 +37,57 @@ Microsserviço de processamento de vídeos desenvolvido com FastAPI, responsáve
 
 ## 🏗️ Arquitetura
 
-O serviço é composto por:
+### Componentes do Sistema
 
-- **Backend**: FastAPI com Python 3.11+
-- **Processamento**: OpenCV para extração de frames
-- **Armazenamento**: AWS S3 para vídeos e outputs
-- **Mensageria**: AWS SQS para processamento assíncrono
-- **Containerização**: Docker + Docker Compose
-- **Infraestrutura**: Terraform para AWS (ECS, ECR, ALB)
-- **CI/CD**: GitHub Actions
+- **Backend**: FastAPI com Python 3.11+ para API REST
+- **Processamento**: OpenCV para extração de frames de vídeo
+- **Armazenamento**: AWS S3 para vídeos de entrada e arquivos ZIP de saída
+- **Mensageria**: AWS SQS para processamento assíncrono e em fila
+- **Notificações**: Serviço de email para alertas de conclusão/erro
+- **Containerização**: Docker + Docker Compose para desenvolvimento
+- **Infraestrutura**: Terraform para provisionamento AWS (ECS, ECR, ALB)
+- **CI/CD**: GitHub Actions para automação de testes e deploy
+
+### Estrutura do Projeto
+
+```
+video-processing-service/
+├── app/                    # Código fonte da aplicação
+│   ├── main.py            # Ponto de entrada FastAPI
+│   ├── config.py          # Configurações e validação
+│   ├── video_processor.py # Lógica de processamento de vídeo
+│   ├── s3_service.py      # Integração com AWS S3
+│   ├── sqs_consumer.py    # Consumidor SQS
+│   ├── email_service.py   # Serviço de notificações por email
+│   ├── schemas.py         # Modelos de dados Pydantic
+│   └── utils.py           # Utilitários
+├── terraform/             # Infraestrutura como código
+│   ├── main.tf           # Recursos AWS principais
+│   ├── variables.tf      # Variáveis Terraform
+│   ├── outputs.tf        # Outputs do Terraform
+│   └── providers.tf      # Provedores AWS
+├── tests/                # Testes unitários e integração
+├── .github/workflows/    # CI/CD pipelines
+├── docker-compose.yaml   # Configuração Docker local
+├── Dockerfile           # Build da imagem Docker
+├── requirements.txt     # Dependências Python
+└── README.md           # Esta documentação
+```
 
 ### Fluxo de Processamento
 
-1. Vídeo é enviado para S3 ou processado via API
-2. Serviço extrai frames usando OpenCV
-3. Imagens são compactadas em ZIP
-4. Arquivo ZIP é salvo no S3
-5. Notificação por email é enviada (opcional)
+```mermaid
+graph TD
+    A[Vídeo enviado para S3] --> B[API recebe requisição]
+    B --> C[SQS Queue]
+    C --> D[Worker processa vídeo]
+    D --> E[Extrai frames com OpenCV]
+    E --> F[Gera arquivo ZIP]
+    F --> G[Salva ZIP no S3]
+    G --> H{Notificação por email?}
+    H -->|Sim| I[Envia email de sucesso]
+    H -->|Não| J[Processamento concluído]
+```
 
 ## 📋 Pré-requisitos
 

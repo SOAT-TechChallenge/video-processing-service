@@ -28,11 +28,6 @@ variable "docker_image_tag" {
   default     = "latest"
 }
 
-variable "notification_service_url" {
-  description = "DNS do Load Balancer do Notification Service"
-  type        = string
-}
-
 variable "aws_access_key_id" {
   description = "Access Key"
   sensitive = true

@@ -127,7 +127,7 @@ resource "aws_ecs_task_definition" "processing_task" {
       { name = "LOG_LEVEL", value = "INFO" },
       { name = "API_SECURITY_INTERNAL_TOKEN", value = "tech-challenge-hackathon" },
       { name = "SQS_QUEUE_URL", value = data.aws_sqs_queue.video_queue.url },
-      { name = "NOTIFICATION_SERVICE_URL", value = var.notification_service_url },
+      { name = "NOTIFICATION_SERVICE_URL", value = "http://${data.aws_ssm_parameter.notification_alb_url.value}" },
       { name = "AWS_ACCESS_KEY_ID", value = var.aws_access_key_id },
       { name = "AWS_SECRET_ACCESS_KEY", value = var.aws_secret_access_key },
       { name = "AWS_SESSION_TOKEN", value = var.aws_session_token },
@@ -161,4 +161,12 @@ resource "aws_ecs_service" "processing_service" {
   lifecycle {
     ignore_changes = [task_definition, load_balancer]
   }
+}
+
+resource "aws_ssm_parameter" "processing_alb_dns" {
+  name        = "/video-processing/alb_dns_name"
+  description = "DNS do Load Balancer do Video Processing para o API Gateway"
+  type        = "String"
+  value       = aws_lb.processing_alb.dns_name
+  overwrite   = true
 }
