@@ -127,7 +127,7 @@ resource "aws_ecs_task_definition" "processing_task" {
       { name = "LOG_LEVEL", value = "INFO" },
       { name = "API_SECURITY_INTERNAL_TOKEN", value = "tech-challenge-hackathon" },
       { name = "SQS_QUEUE_URL", value = data.aws_sqs_queue.video_queue.url },
-      { name = "S3_BUCKET_NAME", value = var.aws_s3_bucket_name },
+      { name = "S3_BUCKET_NAME", value = data.aws_ssm_parameter.s3_bucket_name.value },
       { name = "NOTIFICATION_SERVICE_URL", value = var.notification_service_url },
       { name = "AWS_ACCESS_KEY_ID", value = var.aws_access_key_id },
       { name = "AWS_SECRET_ACCESS_KEY", value = var.aws_secret_access_key },
