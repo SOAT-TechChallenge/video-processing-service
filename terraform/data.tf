@@ -21,3 +21,7 @@ data "aws_sqs_queue" "video_queue" {
 data "aws_ssm_parameter" "video_bucket_name" {
   name = "/video-uploader/s3_bucket_name"
 }
+
+data "aws_ssm_parameter" "notification_alb_url" {
+  name = "/notification/alb_dns_name"
+}
