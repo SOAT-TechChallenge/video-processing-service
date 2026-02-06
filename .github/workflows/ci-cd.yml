@@ -2,23 +2,27 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
+env:
+  AWS_REGION: "us-east-1"
+  ECR_REPOSITORY_NAME: "video-processing-repo"
+  ECS_CLUSTER_NAME: "video-processor-cluster"
+  ECS_SERVICE_NAME: "video-processor"
+
 jobs:
+  # --- 1. QUALIDADE (Python) ---
   python-ci:
     name: 'Python Build & Quality Check'
     runs-on: ubuntu-latest
-    
     steps:
       - name: 'Checkout Repository'
         uses: actions/checkout@v4
 
-      - name: 'Setup Python'
+      - name: 'Setup Python 3.11'
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
@@ -27,61 +31,38 @@ jobs:
       - name: 'Install System Dependencies'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            ffmpeg \
-            libsm6 \
-            libxext6 \
-            libxrender-dev \
-            libglib2.0-0
+          sudo apt-get install -y ffmpeg libsm6 libxext6 libgl1
 
       - name: 'Install Python Dependencies'
         run: |
           python -m pip install --upgrade pip
-          if [ -f "requirements.txt" ]; then
-            pip install -r requirements.txt
-          fi
-          if [ -f "setup.py" ]; then
-            pip install -e .
-          fi
-          # Dependências de teste
-          pip install pytest pytest-cov pytest-asyncio pytest-mock
+          pip install -r requirements.txt pytest pytest-cov pytest-asyncio pytest-mock
 
       - name: 'Build and Verify Coverage'
         run: |
           python -m pytest tests/ \
-            -v \
-            --asyncio-mode=auto \
-            --cov=app \
-            --cov-report=xml \
-            --cov-report=html \
-            --cov-report=term-missing
+            -v --asyncio-mode=auto \
+            --cov=app --cov-report=xml
 
       - name: 'Publish Coverage to PR'
         if: github.event_name == 'pull_request'
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: true
+          fail_ci_if_error: false
 
-  terraform:
-    name: 'Terraform Plan and Apply'
+  # --- 2. TERRAFORM PLAN ---
+  terraform-plan:
+    name: 'Terraform Plan'
     needs: python-ci
     runs-on: ubuntu-latest
     environment: secrets
-
     defaults:
       run:
         working-directory: ./terraform
     steps:
-      - name: 'Checkout GitHub Repository'
+      - name: 'Checkout Repository'
         uses: actions/checkout@v4
-    
-      - name: 'Setup Terraform'
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.9.6 
 
       - name: 'Configure AWS Credentials'
         uses: aws-actions/configure-aws-credentials@v1
@@ -89,14 +70,91 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1 
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 'Setup Terraform'
+        uses: hashicorp/setup-terraform@v2
 
       - name: 'Terraform Init'
         run: terraform init
 
       - name: 'Terraform Plan'
-        run: terraform plan
+        run: |
+          terraform plan \
+            -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" \
+            -var="notification_service_url=${{ secrets.NOTIFICATION_ALB_DNS }}"
+
+  # --- 3. TERRAFORM APPLY ---
+  terraform-apply:
+    name: 'Terraform Apply'
+    needs: terraform-plan
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: secrets
+    defaults:
+      run:
+        working-directory: ./terraform
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: 'Configure AWS Credentials'
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 'Setup Terraform'
+        uses: hashicorp/setup-terraform@v2
+
+      - name: 'Terraform Init'
+        run: terraform init
 
       - name: 'Terraform Apply'
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-        run: terraform apply -auto-approve
+        run: |
+          terraform apply -auto-approve \
+            -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" \
+            -var="notification_service_url=${{ secrets.NOTIFICATION_ALB_DNS }}"
+
+  # --- 4. DEPLOY (Build & Push) ---
+  deploy:
+    name: 'Build Docker & Deploy to ECS'
+    needs: terraform-apply
+    runs-on: ubuntu-latest
+    environment: secrets
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: 'Configure AWS Credentials'
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 'Login to Amazon ECR'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: 'Build, Tag, and Push Image'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY_NAME }}:$IMAGE_TAG .
+          docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY_NAME }}:latest .
+          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY_NAME }}:$IMAGE_TAG
+          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY_NAME }}:latest
+
+      - name: 'Update ECS Service'
+        run: |
+          aws ecs update-service --cluster ${{ env.ECS_CLUSTER_NAME }} --service ${{ env.ECS_SERVICE_NAME }} --force-new-deployment

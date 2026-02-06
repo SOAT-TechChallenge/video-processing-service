@@ -21,7 +21,6 @@ variable "container_port" {
 variable "aws_s3_bucket_name" {
   description = "Nome do bucket S3 criado pelo Video Uploader"
   type        = string
-  default     = "video-storage-d4759b83"
 }
 
 variable "docker_image" {
@@ -41,12 +40,15 @@ variable "notification_service_url" {
 
 variable "aws_access_key_id" {
   description = "Access Key"
+  sensitive = true
 }
 
 variable "aws_secret_access_key" {
   description = "Secret Key"
+  sensitive = true
 }
 
 variable "aws_session_token" {
   description = "Session Token"
+  sensitive = true
 }
