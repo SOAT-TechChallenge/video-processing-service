@@ -21,7 +21,7 @@ async def test_video_processor_initialization():
         with patch('app.video_processor.S3Service') as mock_s3_class:
             mock_s3_service = Mock()
             mock_s3_class.return_value = mock_s3_service
-            mock_email_service = Mock() # Mock do serviço de email injetado
+            mock_email_service = Mock() 
             
             processor = VideoProcessor(
                 upload_dir=temp_dir,
@@ -42,7 +42,7 @@ async def test_process_video_from_s3_success():
         with patch('app.video_processor.S3Service') as mock_s3_class:
             mock_s3_service = Mock()
             mock_s3_class.return_value = mock_s3_service
-            mock_email_service = AsyncMock() # AsyncMock para o método de envio
+            mock_email_service = AsyncMock() 
             
             processor = VideoProcessor(
                 upload_dir=temp_dir,
@@ -151,8 +151,13 @@ def test_get_processed_files():
 
 @pytest.mark.asyncio
 async def test_stop_sqs_consumer():
-    """Testa parada segura do consumidor"""
-    processor = VideoProcessor(email_service=Mock())
-    processor.is_consuming = True
-    processor.stop_sqs_consumer()
-    assert processor.is_consuming is False
+    """Testa parada segura do consumidor evitando erros de permissão em /app"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        processor = VideoProcessor(
+            upload_dir=temp_dir,
+            output_dir=temp_dir,
+            email_service=Mock()
+        )
+        processor.is_consuming = True
+        processor.stop_sqs_consumer()
+        assert processor.is_consuming is False

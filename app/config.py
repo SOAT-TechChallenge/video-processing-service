@@ -32,6 +32,7 @@ def print_config():
     print("CONFIGURAÇÕES DO SISTEMA")
     print("=" * 50)
     print(f"📦 S3 Bucket: {S3_BUCKET_NAME}")
+    print(f"📧 Notification URL: {NOTIFICATION_SERVICE_URL}")
     
     # Mascarar credenciais nos logs
     aws_key = os.getenv("AWS_ACCESS_KEY_ID", "Não configurada")
