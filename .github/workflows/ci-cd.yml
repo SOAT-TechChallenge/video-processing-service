@@ -118,8 +118,7 @@ jobs:
           terraform apply -auto-approve \
             -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
             -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-            -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" \
-            -var="notification_service_url=${{ secrets.NOTIFICATION_ALB_DNS }}"
+            -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}"
 
   # --- 4. DEPLOY (Build & Push) ---
   deploy:
