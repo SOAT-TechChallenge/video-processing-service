@@ -64,7 +64,7 @@ def test_config_print():
         assert "sqs.us-east-1.amazonaws.com" in output
         assert "http://notification-api" in output
         # Valida se o Access Key foi mascarado (Segurança!)
-        assert "AKIA1234" in output
+        assert "AKIA***" in output
         assert "EXAMPLE" in output
         assert "AKIA1234567890EXAMPLE" not in output # Não pode exibir a chave inteira
 

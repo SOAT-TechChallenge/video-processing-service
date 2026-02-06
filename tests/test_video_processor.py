@@ -69,8 +69,7 @@ async def test_process_video_from_s3_success():
                 
                 result = await processor.process_video_from_s3(
                     s3_key="videos/test.mp4",
-                    title="Test Video",
-                    email="test@user.com"
+                    title="Test Video"
                 )
                 
                 assert result == expected_result
@@ -98,8 +97,7 @@ async def test_process_video_from_s3_not_found():
             
             result = await processor.process_video_from_s3(
                 s3_key="videos/nonexistent.mp4",
-                title="Test Video",
-                email="test@user.com"
+                title="Test Video"
             )
             
             assert result["status"] == ProcessingStatus.FAILED
