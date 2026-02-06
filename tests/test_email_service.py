@@ -27,7 +27,7 @@ async def test_send_process_completion_success(email_service):
     """Testa o envio de sucesso quando o serviço de notificação responde 200"""
     
     # Configura o mock do endpoint
-    url = "http://notification-service/notification/send-email"
+    url = "http://notification-service/api/notification/send-email"
     route = respx.post(url).mock(return_value=httpx.Response(200))
 
     result = await email_service.send_process_completion(
@@ -50,7 +50,7 @@ async def test_send_process_completion_success(email_service):
 async def test_send_process_error_logic(email_service):
     """Testa o envio de erro quando o serviço de notificação responde 200"""
     
-    url = "http://notification-service/notification/send-email"
+    url = "http://notification-service/api/notification/send-email"
     route = respx.post(url).mock(return_value=httpx.Response(200))
 
     result = await email_service.send_process_error(
@@ -68,7 +68,7 @@ async def test_send_process_error_logic(email_service):
 async def test_notification_service_failure(email_service):
     """Testa comportamento quando o Notification Service retorna erro (ex: 500)"""
     
-    url = "http://notification-service/notification/send-email"
+    url = "http://notification-service/api/notification/send-email"
     respx.post(url).mock(return_value=httpx.Response(500, text="Internal Server Error"))
 
     result = await email_service.send_process_completion("u@t.com", "V", "Z")
@@ -87,7 +87,7 @@ async def test_missing_config_abort(mock_env):
 @respx.mock
 async def test_connection_timeout(email_service):
     """Testa erro de timeout/conexão"""
-    url = "http://notification-service/notification/send-email"
+    url = "http://notification-service/api/notification/send-email"
     respx.post(url).side_effect = httpx.ConnectTimeout
 
     result = await email_service.send_process_completion("u@t.com", "V", "Z")
