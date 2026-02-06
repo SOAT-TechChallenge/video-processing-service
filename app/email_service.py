@@ -28,7 +28,7 @@ class EmailService:
             return False
 
         # Garante que a URL não tenha barra duplicada e adiciona o endpoint
-        url = f"{self.base_url.rstrip('/')}/notification/send-email"
+        url = f"{self.base_url.rstrip('/')}/api/notification/send-email"
         
         headers = {
             "Content-Type": "application/json",

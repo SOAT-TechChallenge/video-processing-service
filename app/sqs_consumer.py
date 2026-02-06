@@ -10,51 +10,32 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger(__name__)
 
 class SQSConsumer:
-    def __init__(self, queue_url: str, aws_access_key_id: Optional[str] = None,
-                 aws_secret_access_key: Optional[str] = None,
-                 aws_session_token: Optional[str] = None,
-                 region_name: str = "us-east-1"):
-        
+    def __init__(self, queue_url: str, region_name: str = "us-east-1"):
+        """
+        Inicializa o consumidor SQS.
+        Removidas as chaves manuais para permitir que o SDK use automaticamente 
+        as IAM Roles do ECS (Task Role).
+        """
         self.queue_url = queue_url
-        self.aws_access_key_id = aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID")
-        self.aws_secret_access_key = aws_secret_access_key or os.getenv("AWS_SECRET_ACCESS_KEY")
-        self.aws_session_token = aws_session_token or os.getenv("AWS_SESSION_TOKEN")
         self.region_name = region_name
         
-        # Configurar cliente SQS com session token se existir
-        if self.aws_session_token:
-            logger.info("🔑 Usando credenciais AWS com Session Token")
-            self.sqs_client = boto3.client(
-                'sqs',
-                aws_access_key_id=self.aws_access_key_id,
-                aws_secret_access_key=self.aws_secret_access_key,
-                aws_session_token=self.aws_session_token,
-                region_name=self.region_name
-            )
-        else:
-            logger.info("🔑 Usando credenciais AWS permanentes")
-            self.sqs_client = boto3.client(
-                'sqs',
-                aws_access_key_id=self.aws_access_key_id,
-                aws_secret_access_key=self.aws_secret_access_key,
-                region_name=self.region_name
-            )
+        logger.info("🔑 Inicializando clientes AWS via IAM Role (Default Credentials Provider Chain)")
         
-        # Configurar sessão aioboto3
-        session_kwargs = {
-            'aws_access_key_id': self.aws_access_key_id,
-            'aws_secret_access_key': self.aws_secret_access_key,
-            'region_name': self.region_name
-        }
+        # O boto3 busca automaticamente as credenciais na ordem:
+        # 1. Variáveis de ambiente (se existirem)
+        # 2. Metadados do ECS (Task Role)
+        self.sqs_client = boto3.client(
+            'sqs',
+            region_name=self.region_name
+        )
         
-        if self.aws_session_token:
-            session_kwargs['aws_session_token'] = self.aws_session_token
-        
-        self.session = aioboto3.Session(**session_kwargs)
+        # Configurar sessão aioboto3 para consumo assíncrono
+        self.session = aioboto3.Session(region_name=self.region_name)
     
     async def consume_messages(self, max_messages: int = 10, wait_time: int = 20):
         """Consome mensagens da fila SQS"""
         try:
+            # O aioboto3.Session sem chaves explícitas também usa a Task Role
             async with self.session.client('sqs') as sqs:
                 response = await sqs.receive_message(
                     QueueUrl=self.queue_url,
@@ -77,11 +58,9 @@ class SQSConsumer:
                         
                         logger.info(f"🔍 Processando mensagem: {body.get('s3Key', 'unknown')}")
                         
-                        # Processar a mensagem
                         processed = await self.process_message(body)
                         
                         if processed:
-                            # Deletar mensagem da fila
                             await sqs.delete_message(
                                 QueueUrl=self.queue_url,
                                 ReceiptHandle=receipt_handle
@@ -96,12 +75,12 @@ class SQSConsumer:
                         })
                         
                     except Exception as e:
-                        logger.error(f"❌ Erro ao processar mensagem: {e}")
-                        # Não deletar mensagem em caso de erro
+                        logger.error(f"❌ Erro ao processar mensagem individual: {e}")
                 
                 return processed_messages
                 
         except Exception as e:
+            # Aqui é onde o erro de AccessDenied era capturado antes
             logger.error(f"❌ Erro ao consumir mensagens SQS: {e}")
             return []
     
