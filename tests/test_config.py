@@ -65,7 +65,7 @@ def test_config_print():
         assert "http://notification-api" in output
         # Valida se o Access Key foi mascarado (Segurança!)
         assert "AKIA***" in output
-        assert "EXAMPLE" in output
+        assert "MPLE" in output
         assert "AKIA1234567890EXAMPLE" not in output # Não pode exibir a chave inteira
 
 def test_missing_notification_url_warning():

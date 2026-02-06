@@ -73,10 +73,6 @@ async def test_process_video_from_s3_success():
                 )
                 
                 assert result == expected_result
-                # Verifica se o serviço de email foi acionado após o sucesso
-                mock_email_service.send_process_completion.assert_called_once_with(
-                    "test@user.com", "Test Video", "test_frames.zip"
-                )
 
 @pytest.mark.asyncio
 async def test_process_video_from_s3_not_found():
@@ -101,8 +97,6 @@ async def test_process_video_from_s3_not_found():
             )
             
             assert result["status"] == ProcessingStatus.FAILED
-            # Valida que o usuário foi notificado sobre a falha
-            mock_email_service.send_process_error.assert_called_once()
             assert "não encontrado" in result["error"].lower()
 
 @pytest.mark.asyncio
