@@ -158,3 +158,8 @@ jobs:
       - name: 'Update ECS Service'
         run: |
           aws ecs update-service --cluster ${{ env.ECS_CLUSTER_NAME }} --service ${{ env.ECS_SERVICE_NAME }} --force-new-deployment
+      
+      - name: 'Show ALB URL'
+        run: |
+          ALB_URL=$(aws elbv2 describe-load-balancers --names "${{ env.ECS_SERVICE_NAME }}-alb" --query "LoadBalancers[0].DNSName" --output text)
+          echo "::notice title=Link de Acesso::http://$ALB_URL"
