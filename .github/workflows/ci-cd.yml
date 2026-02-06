@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 env:
@@ -90,7 +90,7 @@ jobs:
   terraform-apply:
     name: 'Terraform Apply'
     needs: terraform-plan
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: secrets
     defaults:
@@ -128,7 +128,7 @@ jobs:
     needs: terraform-apply
     runs-on: ubuntu-latest
     environment: secrets
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     steps:
       - name: 'Checkout Repository'
         uses: actions/checkout@v4
