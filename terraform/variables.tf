@@ -18,11 +18,6 @@ variable "container_port" {
   default     = 8000
 }
 
-variable "aws_s3_bucket_name" {
-  description = "Nome do bucket S3 criado pelo Video Uploader"
-  type        = string
-}
-
 variable "docker_image" {
   description = "Imagem Docker"
   default     = "leynerbueno/video-processing-service"
