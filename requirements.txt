@@ -4,7 +4,7 @@ uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 python-dotenv==1.0.0
 
-# --- Processamento de Vídeo (Headless é melhor para Docker/ECS) ---
+# --- Processamento de Vídeo ---
 opencv-python-headless==4.10.0.84
 pillow==10.2.0
 numpy==1.26.4
@@ -13,9 +13,10 @@ numpy==1.26.4
 aioboto3==12.0.0
 httpx>=0.24.0
 
-# --- Testes (Essenciais para o seu CI passar) ---
+# --- Testes (Incluindo a correção do conftest) ---
 pytest==8.0.0
 pytest-asyncio==0.23.2
 pytest-cov==4.1.0
 pytest-mock==3.12.0
-respx  # Adicionei esta, que faltou no seu e causou o erro anterior
+respx
+pytz
