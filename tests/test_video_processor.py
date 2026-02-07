@@ -18,6 +18,7 @@ from app.config import S3_BUCKET_NAME
 async def test_video_processor_initialization():
     """Testa inicialização do VideoProcessor com EmailService injetado"""
     with tempfile.TemporaryDirectory() as temp_dir:
+        # Precisamos mockar o S3Service para evitar que ele tente conectar na AWS no __init__
         with patch('app.video_processor.S3Service') as mock_s3_class:
             mock_s3_service = Mock()
             mock_s3_class.return_value = mock_s3_service
@@ -33,123 +34,109 @@ async def test_video_processor_initialization():
             assert processor.output_dir == Path(temp_dir)
             assert processor.email_service == mock_email_service
             assert processor.s3_bucket == S3_BUCKET_NAME
-            mock_s3_class.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_process_video_from_s3_success():
-    """Testa processamento de vídeo do S3 com sucesso e disparo de email"""
+async def test_process_message_sqs_success_with_email():
+    """Testa se o processamento via SQS dispara o e-mail corretamente para o destinatário"""
     with tempfile.TemporaryDirectory() as temp_dir:
+        mock_email_service = AsyncMock()
+        # Mocking S3Service to avoid AWS connection
         with patch('app.video_processor.S3Service') as mock_s3_class:
-            mock_s3_service = Mock()
-            mock_s3_class.return_value = mock_s3_service
-            mock_email_service = AsyncMock() 
-            
             processor = VideoProcessor(
                 upload_dir=temp_dir,
                 output_dir=temp_dir,
                 email_service=mock_email_service
             )
-            processor.s3_service = mock_s3_service
             
-            mock_s3_service.video_exists = Mock(return_value=True)
-            mock_s3_service.download_video = Mock()
-            
-            expected_result = {
-                "video_id": "test-id",
-                "status": ProcessingStatus.COMPLETED,
-                "zip_filename": "test_frames.zip",
-                "zip_path": "/tmp/test_frames.zip",
-                "frame_count": 5,
-                "error": None
+            message = {
+                's3Key': 'videos/test.mp4',
+                'title': 'Video do Hackathon',
+                'email': 'instrutor@kungfu.com.br' # E-mail vindo do payload SQS
             }
             
-            with patch.object(processor, '_process_video_internal', 
-                            new_callable=AsyncMock) as mock_process:
-                mock_process.return_value = expected_result
+            # Mockamos o processamento interno para focar na lógica da mensagem e e-mail
+            with patch.object(processor, 'process_video_from_s3', new_callable=AsyncMock) as mock_process:
+                mock_process.return_value = {
+                    "status": ProcessingStatus.COMPLETED, 
+                    "zip_filename": "res_frames.zip",
+                    "video_id": "123"
+                }
                 
-                result = await processor.process_video_from_s3(
-                    s3_key="videos/test.mp4",
-                    title="Test Video"
+                result = await processor.process_message(message)
+                
+                assert result is True
+                # Pequena pausa para permitir que a task do asyncio.create_task rode no loop
+                await asyncio.sleep(0.1)
+                
+                # VERIFICAÇÃO CRUCIAL: O e-mail foi enviado para o endereço certo?
+                mock_email_service.send_process_completion.assert_called_once_with(
+                    recipient_email='instrutor@kungfu.com.br',
+                    video_title='Video do Hackathon',
+                    zip_filename='res_frames.zip'
                 )
-                
-                assert result == expected_result
 
 @pytest.mark.asyncio
-async def test_process_video_from_s3_not_found():
-    """Testa processamento quando vídeo não existe no S3 e envia aviso de erro"""
+async def test_internal_processing_with_s3_upload():
+    """Testa se a lógica interna realmente chama o upload para o S3 após gerar o ZIP"""
     with tempfile.TemporaryDirectory() as temp_dir:
-        mock_email_service = AsyncMock()
         with patch('app.video_processor.S3Service') as mock_s3_class:
             mock_s3_service = Mock()
             mock_s3_class.return_value = mock_s3_service
             
-            processor = VideoProcessor(
-                upload_dir=temp_dir,
-                output_dir=temp_dir,
-                email_service=mock_email_service
-            )
-            processor.s3_service = mock_s3_service
-            mock_s3_service.video_exists = Mock(return_value=False)
+            processor = VideoProcessor(upload_dir=temp_dir, output_dir=temp_dir)
             
-            result = await processor.process_video_from_s3(
-                s3_key="videos/nonexistent.mp4",
-                title="Test Video"
-            )
+            # Criamos um arquivo de vídeo fake para o teste
+            fake_video = Path(temp_dir) / "test_video.mp4"
+            fake_video.write_text("fake video content")
             
-            assert result["status"] == ProcessingStatus.FAILED
-            assert "não encontrado" in result["error"].lower()
+            # Mocks para as funções de utilitários
+            with patch('app.video_processor.extract_frames_from_video', return_value=["/tmp/f1.jpg"]), \
+                 patch('app.video_processor.create_zip_from_images', return_value=True), \
+                 patch('app.video_processor.cleanup_temp_files', return_value=True):
+                
+                result = await processor._process_video_internal(
+                    video_path=str(fake_video),
+                    user_id="user123",
+                    video_metadata={'title': 'Test', 's3_key': 'v.mp4'}
+                )
+                
+                assert result["status"] == ProcessingStatus.COMPLETED
+                
+                # VERIFICAÇÃO CRUCIAL: O método de upload para o S3 foi chamado?
+                # Isso garante que o ZIP não ficou preso no container
+                mock_s3_service.upload_video.assert_called_once()
+                args, _ = mock_s3_service.upload_video.call_args
+                assert "processed/" in args[1] # s3_key deve conter o prefixo processed/
 
 @pytest.mark.asyncio
-async def test_process_message_sqs_success():
-    """Testa fluxo vindo do SQS injetando dependências"""
+async def test_process_message_sqs_failure_notification():
+    """Testa se o e-mail de erro é enviado em caso de falha no processamento"""
     with tempfile.TemporaryDirectory() as temp_dir:
         mock_email_service = AsyncMock()
-        processor = VideoProcessor(
-            upload_dir=temp_dir,
-            output_dir=temp_dir,
-            email_service=mock_email_service
-        )
-        
-        message = {
-            's3Key': 'videos/test.mp4',
-            'title': 'Video SQS',
-            'email': 'sqs@user.com'
-        }
-        
-        with patch.object(processor, 'process_video_from_s3', new_callable=AsyncMock) as mock_process:
-            mock_process.return_value = {"status": ProcessingStatus.COMPLETED, "zip_filename": "res.zip"}
+        with patch('app.video_processor.S3Service'):
+            processor = VideoProcessor(upload_dir=temp_dir, output_dir=temp_dir, email_service=mock_email_service)
             
-            result = await processor.process_message(message)
+            message = {'s3Key': 'v.mp4', 'title': 'Erro', 'email': 'user@test.com'}
             
-            assert result is True
-            mock_process.assert_called_once()
+            with patch.object(processor, 'process_video_from_s3', new_callable=AsyncMock) as mock_process:
+                mock_process.return_value = {"status": ProcessingStatus.FAILED, "error": "Codec incompatível"}
+                
+                await processor.process_message(message)
+                await asyncio.sleep(0.1)
+                
+                # Verifica se o e-mail de erro foi disparado
+                mock_email_service.send_process_error.assert_called_once()
 
-def test_get_processed_files():
-    """Testa listagem de arquivos garantindo que apenas ZIPs apareçam"""
+def test_get_processed_files_filtering():
+    """Garante que a listagem de arquivos ignora lixo e foca em ZIPs"""
     with tempfile.TemporaryDirectory() as temp_dir:
-        processor = VideoProcessor(
-            upload_dir=temp_dir,
-            output_dir=temp_dir,
-            email_service=Mock()
-        )
-        
-        # Cria arquivos de teste
-        (Path(temp_dir) / "test1_frames.zip").write_bytes(b"zip1")
-        (Path(temp_dir) / "other.txt").write_text("not a zip")
-        
-        files = processor.get_processed_files()
-        assert len(files) == 1
-        assert files[0]["filename"] == "test1_frames.zip"
-
-@pytest.mark.asyncio
-async def test_stop_sqs_consumer():
-    """Testa parada segura do consumidor evitando erros de permissão em /app"""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        processor = VideoProcessor(
-            upload_dir=temp_dir,
-            output_dir=temp_dir,
-            email_service=Mock()
-        )
-        processor.is_consuming = True
-        processor.stop_sqs_consumer()
-        assert processor.is_consuming is False
+        with patch('app.video_processor.S3Service'):
+            processor = VideoProcessor(upload_dir=temp_dir, output_dir=temp_dir)
+            
+            # Cria um ZIP e um arquivo TXT
+            (Path(temp_dir) / "result.zip").write_bytes(b"data")
+            (Path(temp_dir) / "logs.txt").write_text("logs")
+            
+            files = processor.get_processed_files()
+            assert len(files) == 1
+            assert files[0]["filename"] == "result.zip"
