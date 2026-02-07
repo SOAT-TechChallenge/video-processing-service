@@ -191,6 +191,14 @@ class VideoProcessor(SQSConsumer):
             )
             logger.info(f"✅ Upload concluído com sucesso!")
             
+            # --- 🚀 A JOGADA DE MESTRE: EXCLUSÃO DO ORIGINAL ---
+            # Pegamos o s3_key original que veio no metadata
+            original_key = video_metadata.get('s3_key')
+            if original_key:
+                self.s3_service.delete_video(original_key)
+            # --------------------------------------------------
+
+            # Limpeza local (arquivos temporários do container)
             cleanup_temp_files(video_path, str(temp_dir))
             
             return {

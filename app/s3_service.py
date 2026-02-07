@@ -94,3 +94,14 @@ class S3Service:
         except Exception as e:
             logger.error(f"❌ Erro crítico no upload para o S3: {e}")
             raise
+
+    def delete_video(self, s3_key: str):
+            """
+            🗑️ Exclui o vídeo original do bucket após o processamento.
+            """
+            try:
+                logger.info(f"🗑️ Excluindo arquivo original do S3: {s3_key}")
+                self.s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
+                logger.info(f"✅ Arquivo {s3_key} excluído com sucesso.")
+            except Exception as e:
+                logger.error(f"❌ Erro ao excluir arquivo do S3: {e}")

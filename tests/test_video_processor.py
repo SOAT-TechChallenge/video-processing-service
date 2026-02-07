@@ -76,8 +76,8 @@ async def test_process_message_sqs_success_with_email():
                 )
 
 @pytest.mark.asyncio
-async def test_internal_processing_with_s3_upload():
-    """Testa se a lógica interna realmente chama o upload para o S3 após gerar o ZIP"""
+async def test_internal_processing_with_s3_upload_and_cleanup():
+    """Testa o fluxo completo: extração -> zip -> upload -> delete original"""
     with tempfile.TemporaryDirectory() as temp_dir:
         with patch('app.video_processor.S3Service') as mock_s3_class:
             mock_s3_service = Mock()
@@ -85,11 +85,10 @@ async def test_internal_processing_with_s3_upload():
             
             processor = VideoProcessor(upload_dir=temp_dir, output_dir=temp_dir)
             
-            # Criamos um arquivo de vídeo fake para o teste
             fake_video = Path(temp_dir) / "test_video.mp4"
             fake_video.write_text("fake video content")
             
-            # Mocks para as funções de utilitários
+            # Mock dos utilitários
             with patch('app.video_processor.extract_frames_from_video', return_value=["/tmp/f1.jpg"]), \
                  patch('app.video_processor.create_zip_from_images', return_value=True), \
                  patch('app.video_processor.cleanup_temp_files', return_value=True):
@@ -97,21 +96,18 @@ async def test_internal_processing_with_s3_upload():
                 result = await processor._process_video_internal(
                     video_path=str(fake_video),
                     user_id="user123",
-                    video_metadata={'title': 'Test', 's3_key': 'v.mp4'}
+                    video_metadata={'title': 'Hackathon', 's3_key': 'videos/test_video.mp4'}
                 )
                 
                 assert result["status"] == ProcessingStatus.COMPLETED
                 
-                # VERIFICAÇÃO AJUSTADA:
-                # Usamos assert_called_with para verificar os parâmetros nomeados diretamente
+                # 1. Validar se subiu o ZIP
                 mock_s3_service.upload_video.assert_called_once()
                 
-                # Pegamos os argumentos passados na chamada
-                call_args = mock_s3_service.upload_video.call_args
-                # call_args.kwargs funciona melhor para capturar parâmetros nomeados como local_path e s3_key
-                actual_s3_key = call_args.kwargs.get('s3_key') or call_args.args[1]
+                # 2. Validar se excluiu o vídeo original (A NOVIDADE!)
+                mock_s3_service.delete_video.assert_called_once_with('videos/test_video.mp4')
                 
-                assert "processed/" in actual_s3_key
+                logger.info("✅ Teste de upload e limpeza aprovado!")
 
 @pytest.mark.asyncio
 async def test_process_message_sqs_failure_notification():

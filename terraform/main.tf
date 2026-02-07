@@ -127,7 +127,7 @@ resource "aws_ecs_task_definition" "processing_task" {
       { name = "LOG_LEVEL", value = "INFO" },
       { name = "API_SECURITY_INTERNAL_TOKEN", value = "tech-challenge-hackathon" },
       { name = "SQS_QUEUE_URL", value = data.aws_sqs_queue.video_queue.url },
-      { name = "NOTIFICATION_SERVICE_URL", value = "http://${data.aws_ssm_parameter.notification_alb_url.value}" },
+      { name = "NOTIFICATION_SERVICE_URL", value = "http://${data.aws_ssm_parameter.notification_url.value}" },
       { name = "S3_BUCKET_NAME", value = data.aws_ssm_parameter.video_bucket_name.value }
     ]
   }])
