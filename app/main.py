@@ -33,14 +33,7 @@ async def lifespan(app: FastAPI):
         services["processor"] = processor
         
         logger.info("✅ Serviços inicializados e dependências injetadas")
-        
-        if SQS_QUEUE_URL:
-            logger.info(f"📫 Iniciando consumidor SQS: {SQS_QUEUE_URL}")
-            consumer_task = asyncio.create_task(processor.start_sqs_consumer())
-            services["consumer_task"] = consumer_task
-        else:
-            logger.info("ℹ️ Modo manual: Sem SQS configurada.")
-            
+                   
         yield
         
     except Exception as e:
