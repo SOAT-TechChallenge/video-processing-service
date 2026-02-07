@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from pathlib import Path
 import tempfile
 from fastapi import HTTPException, BackgroundTasks
-from httpx import AsyncClient # Usaremos o cliente para evitar imports diretos de funções
+from httpx import AsyncClient, ASGITransport # Adicionada a importação do transport
 
 from app.main import app, services
 from app.schemas import ProcessingStatus
@@ -29,23 +29,25 @@ def temp_zip_file():
 async def test_process_s3_video_manual_logic():
     """Testa se o endpoint manual agenda a tarefa via BackgroundTasks"""
     mock_processor = Mock()
-    # Mock do dicionário global de serviços
+    # Usamos o novo padrão transport do httpx
+    transport = ASGITransport(app=app)
+    
     with patch.dict(services, {"processor": mock_processor}):
-        async with AsyncClient(app=app, base_url="http://test") as ac:
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
             response = await ac.post(
                 "/process/s3/videos/test.mp4",
                 params={"title": "Manual", "email": "test@test.com"}
             )
         
         assert response.status_code == 202
-        # Verifica se o process_message foi chamado (agendado)
         mock_processor.process_message.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_list_s3_videos_error_flow():
     """Testa erro 500 quando os serviços não estão inicializados"""
+    transport = ASGITransport(app=app)
     with patch.dict(services, {}, clear=True):
-        async with AsyncClient(app=app, base_url="http://test") as ac:
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
             response = await ac.get("/s3/videos")
         assert response.status_code == 500
 
@@ -54,14 +56,15 @@ async def test_download_zip_not_found():
     """Testa erro 404 para arquivo inexistente"""
     mock_processor = Mock()
     mock_processor.output_dir = Path("/tmp")
+    transport = ASGITransport(app=app)
+    
     with patch.dict(services, {"processor": mock_processor}):
-        async with AsyncClient(app=app, base_url="http://test") as ac:
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
             response = await ac.get("/download/arquivo_que_nao_existe.zip")
         assert response.status_code == 404
 
 def test_root_endpoint_version():
     """Valida a versão e o nome do serviço no root"""
-    # Usamos Mock apenas para o que o endpoint consome
     with patch.dict(services, {"email": Mock()}):
         from app.main import root
         result = asyncio.run(root())
@@ -91,7 +94,6 @@ async def test_lifespan_complete_flow():
             assert "processor" in services
             assert "email" in services
         
-        # Garante que o shutdown foi chamado
         mock_processor.stop_sqs_consumer.assert_called()
 
 def test_app_metadata_consistency():
