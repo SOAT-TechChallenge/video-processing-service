@@ -8,8 +8,8 @@ resource "aws_ecr_repository" "video_processing" {
 
 # --- Security Groups ---
 resource "aws_security_group" "alb_sg" {
-  name        = "${var.app_name}-alb-sg"
-  vpc_id      = data.aws_vpc.default.id
+  name   = "${var.app_name}-alb-sg"
+  vpc_id = data.aws_vpc.default.id
   ingress {
     from_port   = 80
     to_port     = 80
@@ -25,8 +25,8 @@ resource "aws_security_group" "alb_sg" {
 }
 
 resource "aws_security_group" "ecs_sg" {
-  name        = "${var.app_name}-ecs-sg"
-  vpc_id      = data.aws_vpc.default.id
+  name   = "${var.app_name}-ecs-sg"
+  vpc_id = data.aws_vpc.default.id
   ingress {
     from_port       = var.container_port
     to_port         = var.container_port
@@ -99,7 +99,7 @@ resource "aws_ecs_cluster" "processing_cluster" {
 }
 
 resource "aws_ecs_task_definition" "processing_task" {
-  family                   = "${var.app_name}-v3"
+  family                   = "${var.app_name}-v4"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 1024
@@ -108,9 +108,9 @@ resource "aws_ecs_task_definition" "processing_task" {
   task_role_arn            = data.aws_iam_role.lab_role.arn
 
   container_definitions = jsonencode([{
-    name      = var.app_name
-    image     = "${aws_ecr_repository.video_processing.repository_url}:latest"
-    essential = true
+    name         = var.app_name
+    image        = "${aws_ecr_repository.video_processing.repository_url}:latest"
+    essential    = true
     portMappings = [{ containerPort = var.container_port }]
     logConfiguration = {
       logDriver = "awslogs"
@@ -134,11 +134,11 @@ resource "aws_ecs_task_definition" "processing_task" {
 }
 
 resource "aws_ecs_service" "processing_service" {
-  name            = var.app_name
-  cluster         = aws_ecs_cluster.processing_cluster.id
-  task_definition = aws_ecs_task_definition.processing_task.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                              = var.app_name
+  cluster                           = aws_ecs_cluster.processing_cluster.id
+  task_definition                   = aws_ecs_task_definition.processing_task.arn
+  desired_count                     = 1
+  launch_type                       = "FARGATE"
   health_check_grace_period_seconds = 300
 
   network_configuration {
