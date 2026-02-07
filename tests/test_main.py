@@ -29,9 +29,9 @@ def temp_zip_file():
 async def test_process_s3_video_manual_logic():
     """Testa se o endpoint manual agenda a tarefa via BackgroundTasks"""
     mock_processor = Mock()
-    # Usamos o novo padrão transport do httpx
     transport = ASGITransport(app=app)
     
+    # Injetamos o mock apenas para o processor
     with patch.dict(services, {"processor": mock_processor}):
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             response = await ac.post(
@@ -44,11 +44,14 @@ async def test_process_s3_video_manual_logic():
 
 @pytest.mark.asyncio
 async def test_list_s3_videos_error_flow():
-    """Testa erro 500 quando os serviços não estão inicializados"""
+    """Testa erro 500 quando o serviço S3 não está inicializado"""
     transport = ASGITransport(app=app)
-    with patch.dict(services, {}, clear=True):
+    # Removemos apenas a chave 's3' para forçar o erro 500 específico da rota
+    with patch.dict(services, {"s3": None}):
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             response = await ac.get("/s3/videos")
+        
+        # O endpoint verifica: if not s3_svc: raise HTTPException(500)
         assert response.status_code == 500
 
 @pytest.mark.asyncio
