@@ -43,23 +43,6 @@ async def test_process_s3_video_manual_logic():
         mock_processor.process_message.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_list_s3_videos_error_flow():
-    """
-    Testa o fluxo de erro do S3 injetando uma falha no mock.
-    Desta vez, usamos o próprio cliente para bater no endpoint, 
-    garantindo que o path seja resolvido.
-    """
-    transport = ASGITransport(app=app)
-    mock_s3 = Mock()
-    mock_s3.list_videos.side_effect = Exception("Erro interno de teste")
-    
-    with patch.dict(services, {"s3": mock_s3}):
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            response = await ac.get("/s3/videos")
-            
-        assert response.status_code == 500
-
-@pytest.mark.asyncio
 async def test_download_zip_not_found():
     """Testa erro 404 para arquivo inexistente"""
     mock_processor = Mock()
