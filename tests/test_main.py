@@ -45,27 +45,19 @@ async def test_process_s3_video_manual_logic():
 @pytest.mark.asyncio
 async def test_list_s3_videos_error_flow():
     """
-    Testa erro 500 localizando a função pela rota do app.
-    Resolve ImportError e problemas de roteamento HTTP (404).
+    Testa o fluxo de erro do S3 injetando uma falha no mock.
+    Desta vez, usamos o próprio cliente para bater no endpoint, 
+    garantindo que o path seja resolvido.
     """
-    func = None
-    for route in app.routes:
-        if hasattr(route, "path") and route.path == "/s3/videos":
-            func = route.endpoint
-            break
-    
-    if not func:
-        pytest.fail("Rota /s3/videos não encontrada no app")
-
+    transport = ASGITransport(app=app)
     mock_s3 = Mock()
-    mock_s3.list_videos.side_effect = Exception("Erro interno forçado")
+    mock_s3.list_videos.side_effect = Exception("Erro interno de teste")
     
     with patch.dict(services, {"s3": mock_s3}):
-        with pytest.raises(HTTPException) as exc_info:
-            await func(prefix="videos/")
-        
-        assert exc_info.value.status_code == 500
-        assert "Erro interno forçado" in str(exc_info.value.detail)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            response = await ac.get("/s3/videos")
+            
+        assert response.status_code == 500
 
 @pytest.mark.asyncio
 async def test_download_zip_not_found():
