@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
-from typing import Optional
+from typing import Optional, List, Dict
 from contextlib import asynccontextmanager
 import logging
 from urllib.parse import unquote
@@ -11,7 +11,7 @@ from .video_processor import VideoProcessor
 from .s3_service import S3Service
 from .email_service import EmailService
 from .config import S3_BUCKET_NAME, SQS_QUEUE_URL, print_config
-from .schemas import ProcessingStatus # Importe o Status para evitar erros de string
+from .schemas import ProcessingStatus
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -79,6 +79,20 @@ async def health_check():
         "sqs_connected": SQS_QUEUE_URL is not None
     }
 
+# 🚀 RESTAURADO: Listagem de vídeos no S3
+@app.get("/s3/videos")
+async def list_s3_videos(prefix: str = "videos/"):
+    try:
+        s3_svc = services.get("s3")
+        if not s3_svc:
+            raise HTTPException(500, "Serviço S3 indisponível")
+            
+        videos = s3_svc.list_videos(prefix)
+        return {"count": len(videos), "videos": videos}
+    except Exception as e:
+        logger.error(f"❌ Erro ao listar S3: {e}")
+        raise HTTPException(500, str(e))
+
 @app.post("/process/s3/{s3_key:path}")
 async def process_s3_video(
     s3_key: str,
@@ -87,18 +101,12 @@ async def process_s3_video(
     description: Optional[str] = "",
     email: Optional[str] = None
 ):
-    """
-    Endpoint para testes manuais.
-    Agora usa a mesma lógica centralizada do SQS para garantir e-mails e limpeza.
-    """
     processor = services.get("processor")
     if not processor:
         raise HTTPException(500, "Processor indisponível")
 
     logger.info(f"🎬 Pedido manual recebido para: {s3_key} (Email: {email})")
 
-    # Criamos um "mock" da mensagem SQS para reusar a lógica process_message
-    # Assim garantimos e-mail de início, fim, erro e exclusão do S3.
     mock_sqs_message = {
         's3Key': s3_key,
         'title': title,
@@ -106,7 +114,6 @@ async def process_s3_video(
         'email': email
     }
 
-    # Dispara a lógica COMPLETA em background
     background_tasks.add_task(processor.process_message, mock_sqs_message)
     
     return JSONResponse(
@@ -143,3 +150,7 @@ async def download_zip(filename: str):
         filename=filename,
         media_type='application/zip'
     )
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
