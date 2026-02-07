@@ -16,8 +16,6 @@ class SQSConsumer:
     def __init__(self, queue_url: str, region_name: str = "us-east-1"):
         """
         Inicializa o consumidor SQS.
-        Removidas as chaves manuais para permitir que o SDK use automaticamente 
-        as IAM Roles do ECS (Task Role).
         """
         self.queue_url = queue_url
         self.region_name = region_name
@@ -88,6 +86,18 @@ class SQSConsumer:
             return []
     
     async def process_message(self, message: Dict[str, Any]) -> bool:
-        """Processa uma mensagem individual - deve ser sobrescrito"""
-        logger.info(f"📨 Mensagem recebida: {message}")
-        return True
+        # 1. Extrai o e-mail do dicionário (chave que o Uploader enviou)
+        recipient_email = message.get("email")
+        video_title = message.get("title", "Vídeo sem título")
+        s3_key = message.get("s3Key")
+
+        logger.info(f"📧 E-mail do destinatário extraído: {recipient_email}")
+
+        if recipient_email:
+                await self.email_service.send_process_completion(
+                    recipient_email=recipient_email,
+                    video_title=video_title,
+                    zip_filename=f"{s3_key}.zip"
+                )
+            
+            return True
