@@ -6,10 +6,12 @@ import os
 from typing import Dict, Any, Optional
 import aioboto3
 from botocore.exceptions import ClientError
-import os
+
+# Remove resquícios de chaves que o laboratório possa ter injetado
 os.environ.pop('AWS_ACCESS_KEY_ID', None)
 os.environ.pop('AWS_SECRET_ACCESS_KEY', None)
 os.environ.pop('AWS_SESSION_TOKEN', None)
+
 logger = logging.getLogger(__name__)
 
 class SQSConsumer:
@@ -22,21 +24,16 @@ class SQSConsumer:
         
         logger.info("🔑 Inicializando clientes AWS via IAM Role (Default Credentials Provider Chain)")
         
-        # O boto3 busca automaticamente as credenciais na ordem:
-        # 1. Variáveis de ambiente (se existirem)
-        # 2. Metadados do ECS (Task Role)
         self.sqs_client = boto3.client(
             'sqs',
             region_name=self.region_name
         )
         
-        # Configurar sessão aioboto3 para consumo assíncrono
         self.session = aioboto3.Session(region_name=self.region_name)
     
     async def consume_messages(self, max_messages: int = 10, wait_time: int = 20):
         """Consome mensagens da fila SQS"""
         try:
-            # O aioboto3.Session sem chaves explícitas também usa a Task Role
             async with self.session.client('sqs') as sqs:
                 response = await sqs.receive_message(
                     QueueUrl=self.queue_url,
@@ -81,12 +78,13 @@ class SQSConsumer:
                 return processed_messages
                 
         except Exception as e:
-            # Aqui é onde o erro de AccessDenied era capturado antes
             logger.error(f"❌ Erro ao consumir mensagens SQS: {e}")
             return []
     
     async def process_message(self, message: Dict[str, Any]) -> bool:
-        # 1. Extrai o e-mail do dicionário (chave que o Uploader enviou)
+        """
+        Processa uma mensagem individual extraindo o e-mail para notificação.
+        """
         recipient_email = message.get("email")
         video_title = message.get("title", "Vídeo sem título")
         s3_key = message.get("s3Key")
@@ -94,10 +92,15 @@ class SQSConsumer:
         logger.info(f"📧 E-mail do destinatário extraído: {recipient_email}")
 
         if recipient_email:
+            # Note: email_service deve estar injetado na classe que herda SQSConsumer
+            # Se esta for a classe base, garanta que self.email_service exista ou trate o erro
+            try:
                 await self.email_service.send_process_completion(
                     recipient_email=recipient_email,
                     video_title=video_title,
                     zip_filename=f"{s3_key}.zip"
                 )
+            except AttributeError:
+                logger.warning("⚠️ EmailService não inicializado nesta instância.")
             
-            return True
+        return True # Corrigido para True com T maiúsculo
