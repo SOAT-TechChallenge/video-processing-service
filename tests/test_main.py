@@ -45,17 +45,24 @@ async def test_process_s3_video_manual_logic():
 @pytest.mark.asyncio
 async def test_list_s3_videos_error_flow():
     """
-    Testa erro 500 chamando a função diretamente.
-    Isso elimina problemas de roteamento do httpx (404).
+    Testa erro 500 localizando a função pela rota do app.
+    Resolve ImportError e problemas de roteamento HTTP (404).
     """
-    from app.main import list_s3_videos
+    func = None
+    for route in app.routes:
+        if hasattr(route, "path") and route.path == "/s3/videos":
+            func = route.endpoint
+            break
     
+    if not func:
+        pytest.fail("Rota /s3/videos não encontrada no app")
+
     mock_s3 = Mock()
     mock_s3.list_videos.side_effect = Exception("Erro interno forçado")
     
     with patch.dict(services, {"s3": mock_s3}):
         with pytest.raises(HTTPException) as exc_info:
-            await list_s3_videos(prefix="videos/")
+            await func(prefix="videos/")
         
         assert exc_info.value.status_code == 500
         assert "Erro interno forçado" in str(exc_info.value.detail)
