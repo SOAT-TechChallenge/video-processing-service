@@ -99,7 +99,7 @@ resource "aws_ecs_cluster" "processing_cluster" {
 }
 
 resource "aws_ecs_task_definition" "processing_task" {
-  family                   = "${var.app_name}-v4"
+  family                   = "${var.app_name}-v5"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 1024
