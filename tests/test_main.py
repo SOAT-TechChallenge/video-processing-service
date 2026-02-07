@@ -44,14 +44,16 @@ async def test_process_s3_video_manual_logic():
 
 @pytest.mark.asyncio
 async def test_list_s3_videos_error_flow():
-    """Testa erro 500 quando o serviço S3 não está inicializado"""
+    """Testa erro 500 quando o serviço S3 falha ou não retorna dados"""
     transport = ASGITransport(app=app)
-    # Removemos apenas a chave 's3' para forçar o erro 500 específico da rota
-    with patch.dict(services, {"s3": None}):
+    
+    mock_s3 = Mock()
+    mock_s3.list_videos.side_effect = Exception("Erro de conexão S3")
+    
+    with patch.dict(services, {"s3": mock_s3}):
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             response = await ac.get("/s3/videos")
         
-        # O endpoint verifica: if not s3_svc: raise HTTPException(500)
         assert response.status_code == 500
 
 @pytest.mark.asyncio
