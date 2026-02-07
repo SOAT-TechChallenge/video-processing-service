@@ -230,3 +230,21 @@ class VideoProcessor(SQSConsumer):
     def stop_sqs_consumer(self):
         self.is_consuming = False
         logger.info("🛑 Consumidor SQS parado")
+
+    def get_processed_files(self) -> List[Dict]:
+            """Lista os arquivos ZIP processados localmente no output_dir"""
+            try:
+                zip_files = list(self.output_dir.glob("*.zip"))
+                files = []
+                for zip_file in zip_files:
+                    files.append({
+                        "filename": zip_file.name,
+                        "size": zip_file.stat().st_size,
+                        "created_at": zip_file.stat().st_ctime,
+                        "path": str(zip_file),
+                        "url": f"/download/{zip_file.name}"
+                    })
+                return files
+            except Exception as e:
+                logger.error(f"❌ Erro ao listar arquivos processados: {e}")
+                return []

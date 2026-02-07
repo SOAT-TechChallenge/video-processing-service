@@ -102,11 +102,16 @@ async def test_internal_processing_with_s3_upload():
                 
                 assert result["status"] == ProcessingStatus.COMPLETED
                 
-                # VERIFICAÇÃO CRUCIAL: O método de upload para o S3 foi chamado?
-                # Isso garante que o ZIP não ficou preso no container
+                # VERIFICAÇÃO AJUSTADA:
+                # Usamos assert_called_with para verificar os parâmetros nomeados diretamente
                 mock_s3_service.upload_video.assert_called_once()
-                args, _ = mock_s3_service.upload_video.call_args
-                assert "processed/" in args[1] # s3_key deve conter o prefixo processed/
+                
+                # Pegamos os argumentos passados na chamada
+                call_args = mock_s3_service.upload_video.call_args
+                # call_args.kwargs funciona melhor para capturar parâmetros nomeados como local_path e s3_key
+                actual_s3_key = call_args.kwargs.get('s3_key') or call_args.args[1]
+                
+                assert "processed/" in actual_s3_key
 
 @pytest.mark.asyncio
 async def test_process_message_sqs_failure_notification():
