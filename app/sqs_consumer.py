@@ -6,7 +6,10 @@ import os
 from typing import Dict, Any, Optional
 import aioboto3
 from botocore.exceptions import ClientError
-
+import os
+os.environ.pop('AWS_ACCESS_KEY_ID', None)
+os.environ.pop('AWS_SECRET_ACCESS_KEY', None)
+os.environ.pop('AWS_SESSION_TOKEN', None)
 logger = logging.getLogger(__name__)
 
 class SQSConsumer:
