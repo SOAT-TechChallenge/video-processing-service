@@ -12,6 +12,9 @@ from app.video_processor import VideoProcessor
 from app.schemas import ProcessingStatus
 from app.config import S3_BUCKET_NAME
 
+import logging
+logger = logging.getLogger(__name__)
+
 # ========== Testes para VideoProcessor ==========
 
 @pytest.mark.asyncio
