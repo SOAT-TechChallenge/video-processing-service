@@ -151,7 +151,7 @@ async def process_s3_video(
     background_tasks.add_task(process_async)
     
     return JSONResponse(
-        content={"message": "Processamento iniciado", "s3_key": s3_key, "email": email},
+        content={"message": "Processamento iniciado", "s3_key": s3_key},
         status_code=202
     )
 
