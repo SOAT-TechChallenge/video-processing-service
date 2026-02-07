@@ -18,16 +18,6 @@ variable "container_port" {
   default     = 8000
 }
 
-variable "docker_image" {
-  description = "Imagem Docker"
-  default     = "leynerbueno/video-processing-service"
-}
-
-variable "docker_image_tag" {
-  description = "Tag da imagem"
-  default     = "latest"
-}
-
 variable "aws_access_key_id" {
   description = "Access Key"
   sensitive = true

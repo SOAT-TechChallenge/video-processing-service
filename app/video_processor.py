@@ -50,32 +50,38 @@ class VideoProcessor(SQSConsumer):
         logger.info(f"📦 S3 Bucket: {self.s3_bucket}")
 
     async def process_message(self, message: Dict[str, Any]) -> bool:
-        """Processa uma mensagem da fila SQS"""
+        """Processa uma mensagem da fila SQS com rastreabilidade por e-mail"""
         try:
             s3_key = message.get('s3Key')
             title = message.get('title', 'Untitled')
-            description = message.get('description', '')
-            email = message.get('email') # Extração do e-mail vindo do Java/Uploader
+            # Captura o e-mail para log e notificação
+            email = message.get('email', 'Email não informado')
+            
+            logger.info(f"📩 Mensagem SQS recebida | Vídeo: {title} | Usuário: {email}")
             
             if not s3_key:
-                logger.error("❌ Mensagem sem s3Key")
+                logger.error(f"❌ Falha: Mensagem sem s3Key para o usuário {email}")
                 return False
             
-            logger.info(f"📩 Processando mensagem SQS: {title} ({email})")
-            
-            result = await self.process_video_from_s3(
-                s3_key=s3_key,
-                title=title,
-                description=description,
-                source="sqs"
-            )
+            # 🚀 GATILHO 1: AVISO DE INÍCIO
+            if email != 'Email não informado' and self.email_service:
+                logger.info(f"📧 Disparando aviso de INÍCIO para: {email}")
+                asyncio.create_task(
+                    self.email_service.send_process_start(
+                        recipient_email=email,
+                        video_title=title
+                    )
+                )
+
+            # Inicia o processamento pesado
+            result = await self.process_video_from_s3(s3_key=s3_key, title=title)
             
             # === LÓGICA DE SUCESSO ===
             if result.get("status") == ProcessingStatus.COMPLETED:
-                logger.info(f"✅ Processamento concluído: {result.get('video_id')}")
+                logger.info(f"✅ SUCESSO: Processamento concluído para {email} (ID: {result.get('video_id')})")
                 
-                if email and self.email_service:
-                    # Dispara a notificação usando o e-mail extraído do payload SQS
+                # 🚀 GATILHO 2: AVISO DE CONCLUSÃO
+                if email != 'Email não informado' and self.email_service:
                     asyncio.create_task(
                         self.email_service.send_process_completion(
                             recipient_email=email,
@@ -88,9 +94,10 @@ class VideoProcessor(SQSConsumer):
             # === LÓGICA DE FALHA ===
             else:
                 error_msg = result.get('error', 'Erro desconhecido')
-                logger.error(f"❌ Falha no processamento: {error_msg}")
+                logger.error(f"❌ FALHA: {error_msg} para o usuário {email}")
                 
-                if email and self.email_service:
+                # 🚀 GATILHO 3: AVISO DE ERRO
+                if email != 'Email não informado' and self.email_service:
                     asyncio.create_task(
                         self.email_service.send_process_error(
                             recipient_email=email,
@@ -101,15 +108,15 @@ class VideoProcessor(SQSConsumer):
                 return False
             
         except Exception as e:
-            logger.error(f"❌ Erro crítico ao processar mensagem SQS: {e}")
+            logger.error(f"❌ ERRO CRÍTICO no loop de mensagem para {email}: {e}")
             return False
     
     async def process_video_from_s3(self, s3_key: str, title: str = "Unknown", 
                                     description: str = "", user_id: str = "system",
                                     source: str = "manual") -> dict:
-        """Processa um vídeo específico do S3"""
+        """Faz o download do vídeo e gerencia o fluxo de trabalho"""
         try:
-            logger.info(f"🚀 Iniciando processamento: {s3_key}")
+            logger.info(f"🚀 Baixando vídeo para processar: {s3_key}")
             
             if not self.s3_service.video_exists(s3_key):
                 return {
@@ -119,11 +126,9 @@ class VideoProcessor(SQSConsumer):
                     "s3_key": s3_key
                 }
             
-            # Download do vídeo usando Task Role (sem chaves manuais)
             video_filename = f"{generate_unique_id()}_{Path(s3_key).name}"
             video_path = self.upload_dir / video_filename
             
-            logger.info(f"⬇️ Baixando vídeo do S3...")
             self.s3_service.download_video(s3_key=s3_key, local_path=str(video_path))
             
             result = await self._process_video_internal(
@@ -139,9 +144,8 @@ class VideoProcessor(SQSConsumer):
             return result
             
         except Exception as e:
-            logger.error(f"❌ Erro ao processar vídeo do S3: {e}")
+            logger.error(f"❌ Erro no fluxo S3: {e}")
             return {
-                "video_id": "error",
                 "status": ProcessingStatus.FAILED,
                 "error": str(e),
                 "s3_key": s3_key
@@ -149,14 +153,14 @@ class VideoProcessor(SQSConsumer):
     
     async def _process_video_internal(self, video_path: str, user_id: str, 
                                      video_metadata: Dict = None) -> dict:
-        """Lógica interna de extração de frames e zip com UPLOAD para S3"""
+        """Extração de frames, compactação, upload do resultado e limpeza do original"""
         video_id = None
         try:
             video_id = Path(video_path).stem.split('_')[0]
             temp_dir = self.output_dir / f"temp_{video_id}"
             temp_dir.mkdir(exist_ok=True)
             
-            # Extração de Frames
+            # 1. Extração de Frames (CPU Intensive)
             frame_paths = await asyncio.get_event_loop().run_in_executor(
                 self.executor,
                 extract_frames_from_video,
@@ -168,7 +172,7 @@ class VideoProcessor(SQSConsumer):
             if not frame_paths:
                 raise ValueError("Não foi possível extrair frames do vídeo")
             
-            # Criação do ZIP local
+            # 2. Criação do ZIP
             title_safe = re.sub(r'[^\w\.-]', '_', video_metadata.get('title', 'video'))
             zip_filename = f"{video_id}_{title_safe}_frames.zip"
             zip_path = self.output_dir / zip_filename
@@ -180,25 +184,22 @@ class VideoProcessor(SQSConsumer):
                 str(zip_path)
             )
 
-            # --- 🚀 CORREÇÃO: UPLOAD PARA S3 ---
-            # Envia o arquivo ZIP gerado para a pasta 'processed/' no bucket
+            # 3. Upload do Resultado para a pasta 'processed/'
             s3_output_key = f"processed/{zip_filename}"
-            logger.info(f"📤 Fazendo upload para S3: {s3_output_key}")
+            logger.info(f"📤 Fazendo upload do resultado: {s3_output_key}")
             
             self.s3_service.upload_video(
                 local_path=str(zip_path), 
                 s3_key=s3_output_key
             )
-            logger.info(f"✅ Upload concluído com sucesso!")
             
-            # --- 🚀 A JOGADA DE MESTRE: EXCLUSÃO DO ORIGINAL ---
-            # Pegamos o s3_key original que veio no metadata
+            # 4. Limpeza: Deleta o vídeo original da pasta 'videos/'
             original_key = video_metadata.get('s3_key')
             if original_key:
+                logger.info(f"🗑️ Limpando bucket: Removendo original {original_key}")
                 self.s3_service.delete_video(original_key)
-            # --------------------------------------------------
 
-            # Limpeza local (arquivos temporários do container)
+            # 5. Limpeza de arquivos locais do container
             cleanup_temp_files(video_path, str(temp_dir))
             
             return {
@@ -240,19 +241,19 @@ class VideoProcessor(SQSConsumer):
         logger.info("🛑 Consumidor SQS parado")
 
     def get_processed_files(self) -> List[Dict]:
-            """Lista os arquivos ZIP processados localmente no output_dir"""
-            try:
-                zip_files = list(self.output_dir.glob("*.zip"))
-                files = []
-                for zip_file in zip_files:
-                    files.append({
-                        "filename": zip_file.name,
-                        "size": zip_file.stat().st_size,
-                        "created_at": zip_file.stat().st_ctime,
-                        "path": str(zip_file),
-                        "url": f"/download/{zip_file.name}"
-                    })
-                return files
-            except Exception as e:
-                logger.error(f"❌ Erro ao listar arquivos processados: {e}")
-                return []
+        """Lista os arquivos ZIP processados localmente"""
+        try:
+            zip_files = list(self.output_dir.glob("*.zip"))
+            files = []
+            for zip_file in zip_files:
+                files.append({
+                    "filename": zip_file.name,
+                    "size": zip_file.stat().st_size,
+                    "created_at": zip_file.stat().st_ctime,
+                    "path": str(zip_file),
+                    "url": f"/download/{zip_file.name}"
+                })
+            return files
+        except Exception as e:
+            logger.error(f"❌ Erro ao listar arquivos locais: {e}")
+            return []

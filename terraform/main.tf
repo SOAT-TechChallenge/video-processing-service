@@ -156,7 +156,7 @@ resource "aws_ecs_service" "processing_service" {
   depends_on = [aws_lb_listener_rule.allow_gateway]
 
   lifecycle {
-    ignore_changes = [task_definition, load_balancer]
+    ignore_changes = [load_balancer]
   }
 }
 
