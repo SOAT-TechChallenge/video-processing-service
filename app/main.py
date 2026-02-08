@@ -100,11 +100,12 @@ async def process_s3_video(
 
     logger.info(f"🎬 Pedido manual recebido para: {s3_key} (Email: {email})")
 
+    # A CORREÇÃO ESTÁ AQUI: mudar 'email' para 'userEmail'
     mock_sqs_message = {
         's3Key': s3_key,
         'title': title,
         'description': description,
-        'email': email
+        'userEmail': email
     }
 
     background_tasks.add_task(processor.process_message, mock_sqs_message)
@@ -113,7 +114,7 @@ async def process_s3_video(
         content={
             "message": "Processamento iniciado (Modo API Manual)", 
             "s3_key": s3_key,
-            "info": "Você receberá um e-mail em breve se o endereço foi fornecido."
+            "info": f"Notificação será enviada para: {email}" if email else "Sem e-mail informado."
         },
         status_code=202
     )
