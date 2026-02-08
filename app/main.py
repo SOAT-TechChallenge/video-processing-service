@@ -33,7 +33,13 @@ async def lifespan(app: FastAPI):
         services["processor"] = processor
         
         logger.info("✅ Serviços inicializados e dependências injetadas")
-                   
+
+        if SQS_QUEUE_URL:
+            logger.info(f"polling: Iniciando escuta na fila: {SQS_QUEUE_URL}")
+            services["consumer_task"] = asyncio.create_task(
+                services["processor"].start_sqs_consumer()
+            )    
+
         yield
         
     except Exception as e:
@@ -100,7 +106,6 @@ async def process_s3_video(
 
     logger.info(f"🎬 Pedido manual recebido para: {s3_key} (Email: {email})")
 
-    # A CORREÇÃO ESTÁ AQUI: mudar 'email' para 'userEmail'
     mock_sqs_message = {
         's3Key': s3_key,
         'title': title,
@@ -112,7 +117,7 @@ async def process_s3_video(
     
     return JSONResponse(
         content={
-            "message": "Processamento iniciado (Modo API Manual)", 
+            "message": "Processamento iniciado", 
             "s3_key": s3_key,
             "info": f"Notificação será enviada para: {email}" if email else "Sem e-mail informado."
         },
